@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bitácora de Perforaciones</title>
+<meta name="description" content="Registro de campo de perforaciones, columna estratigráfica y ensayos geofísicos con informe PDF.">
+<meta name="theme-color" content="#1F5E57">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Layout: libreta de campo — barra superior, pestañas Perforaciones / Geofísica, fichas, editor a la izquierda y hoja de registro a la derecha; barra de exportación fija abajo */
+:root{
+  --bg:#EEF0EB; --panel:#FFFFFF; --ink:#1C221F; --muted:#5E6862; --line:#D3D8D0;
+  --accent:#1F5E57; --accent-ink:#FFFFFF; --ochre:#A97A1F; --warn:#B4492B; --water:#2F6FAD;
+  --paper:#FCFCF9; --paper-ink:#262A27; --paper-line:#8A918C;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121614; --panel:#1B201D; --ink:#E6E9E4; --muted:#9BA49E; --line:#2E3531;
+  --accent:#5EB3A6; --accent-ink:#0D1412; --ochre:#D7A84C; --warn:#E3805F; --water:#74A9E0;
+  --paper:#E9EAE4; --paper-ink:#222623; --paper-line:#7C837E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121614; --panel:#1B201D; --ink:#E6E9E4; --muted:#9BA49E; --line:#2E3531;
+  --accent:#5EB3A6; --accent-ink:#0D1412; --ochre:#D7A84C; --warn:#E3805F; --water:#74A9E0;
+  --paper:#E9EAE4; --paper-ink:#222623; --paper-line:#7C837E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:16px 4px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:28px;line-height:1}
+.brand h1 sup{font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 5px;vertical-align:6px;margin-left:4px}
+.brand span{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.pill{font-family:var(--f-mono);font-size:11px;padding:4px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--accent);border-color:var(--accent)}
+.pill.busy{color:var(--ochre);border-color:var(--ochre)}
+.pill.local{color:var(--warn);border-color:var(--warn)}
+details.proj{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+details.proj summary{cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;list-style:none}
+details.proj summary::-webkit-details-marker{display:none}
+details.proj summary b{font-family:var(--f-display);font-size:19px}
+details.proj summary small{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px}
+.proj .grid{padding:0 14px 14px}
+label.f,div.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+label.f>span,div.f>span{font-family:var(--f-display);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+input.num{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+input[type=color]{padding:2px;height:36px;cursor:pointer}
+textarea{resize:vertical;min-height:58px}
+input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.span2{grid-column:span 2}
+.full{grid-column:1/-1}
+@media (max-width:420px){.span2{grid-column:1/-1}}
+.ro{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums;padding:7px 9px;border:1px dashed var(--line);border-radius:6px;background:transparent;min-height:37px}
+.note{font-size:12.5px;color:var(--muted)}
+.note.w{color:var(--warn)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.02em;padding:8px 14px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab small{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-left:4px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chip{font-family:var(--f-mono);font-size:13px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip.add{border-style:dashed;color:var(--accent)}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
+@media (max-width:900px){.work{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.sec-h h2{font-size:21px}
+.sec-h .hint{font-size:12.5px;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.layer{border:1px solid var(--line);border-radius:8px;display:grid;grid-template-columns:44px minmax(0,1fr);overflow:hidden}
+.layer .sw{border-right:1px solid var(--line)}
+.layer .sw svg{display:block;width:100%;height:100%}
+.layer .body{padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.layer-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.layer-h b{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:5px}
+.x:hover{color:var(--warn)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:480px){.row2.st,.row3.st{grid-template-columns:minmax(0,1fr)}}
+.colrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.csw{width:40px;height:32px;border-radius:6px;border:1px solid var(--line);cursor:pointer;flex:none}
+.cname{font-size:13.5px;min-width:0;flex:1}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.mun{border:1px solid rgba(0,0,0,.15);border-radius:6px;height:44px;cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding:2px}
+.mun span{font-family:var(--f-mono);font-size:9.5px;line-height:1.1;background:rgba(255,255,255,.82);color:#1C221F;border-radius:3px;padding:1px 3px;white-space:nowrap}
+.mun[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.palfoot{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.palfoot input{width:56px;flex:none}
+.rowS{display:grid;grid-template-columns:70px minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 30px;gap:8px;align-items:end}
+@media (max-width:560px){.rowS{grid-template-columns:repeat(3,minmax(0,1fr))}.rowS .x{justify-self:end}}
+.btn{font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:.02em;border-radius:8px;padding:9px 14px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{font-size:14px;padding:6px 10px}
+.btn.dash{background:transparent;color:var(--accent);border-style:dashed;width:100%}
+.btn.danger{background:transparent;color:var(--warn);border-color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.sheet{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--paper);color:var(--paper-ink);border-radius:6px;border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 140px);overflow:auto}
+@media (max-width:900px){.sheet{position:static;max-height:none}}
+.sheet-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:2px solid var(--paper-ink);padding-bottom:6px}
+.sheet-h h3{font-size:20px}
+.sheet-h span{font-family:var(--f-mono);font-size:11px}
+.sheet h4{font-family:var(--f-display);font-size:15px;margin:6px 0 0;text-transform:uppercase;letter-spacing:.05em}
+.sheet svg{width:100%;height:auto;display:block}
+.warn{font-size:13px;color:var(--warn);display:flex;flex-direction:column;gap:2px}
+.logos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.logo{position:relative;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 26px 6px 8px;height:52px;display:flex;align-items:center}
+.logo img{max-height:38px;max-width:150px;display:block}
+.logo .x{position:absolute;top:2px;right:2px;padding:2px 5px;color:#5E6862}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ph{margin:0;position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;min-width:0}
+.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--line)}
+.ph .num{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:4px}
+.ph .x{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff}
+.ph input{border:none;border-top:1px solid var(--line);border-radius:0;font-size:13.5px}
+.example{font-family:var(--f-mono);font-size:11px;background:var(--ochre);color:var(--accent-ink);padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:28px 18px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+.empty p{margin:0;color:var(--muted);max-width:52ch}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.tbl table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tbl th{font-family:var(--f-display);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--bg)}
+.tbl td{padding:3px 4px;border-bottom:1px solid var(--line)}
+.tbl td input{padding:4px 6px;font-size:13.5px;min-width:70px}
+.tbl td.c{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);text-align:right;padding-right:8px;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font-family:var(--f-body);font-size:14px;padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
+.bar .in{max-width:1180px;margin:0 auto;display:flex;gap:8px;overflow-x:auto}
+.dlg{position:fixed;inset:0;background:rgba(10,14,12,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
+.dlg .box{background:var(--panel);border-radius:12px;padding:18px;max-width:380px;width:100%;display:flex;flex-direction:column;gap:14px}
+.dlg .box p{margin:0}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:8px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px}
+.legend i{display:inline-block;width:22px;height:13px;vertical-align:-2px;margin-right:4px;border:1px solid var(--paper-line)}
+.legend i svg{display:block;width:100%;height:100%}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Bitácora de Perforaciones</h1><span>Registro de campo · columna estratigráfica · geofísica</span></div>
+    <span class="pill" id="status">Cargando…</span>
+  </header>
+
+  <details class="proj" id="proj">
+    <summary><b>Datos del proyecto</b><small id="projSum"></small></summary>
+    <div class="grid">
+      <label class="f span2"><span>Empresa / consultora</span><input id="pj-empresa" data-k="pj.empresa"></label>
+      <label class="f span2"><span>Proyecto</span><input id="pj-nombre" data-k="pj.nombre"></label>
+      <label class="f"><span>Cliente</span><input id="pj-cliente" data-k="pj.cliente"></label>
+      <label class="f"><span>Ubicación</span><input id="pj-ubicacion" data-k="pj.ubicacion"></label>
+      <label class="f"><span>Sistema de coordenadas</span><input id="pj-sistema" data-k="pj.sistema"></label>
+      <label class="f"><span>Responsable</span><input id="pj-responsable" data-k="pj.responsable"></label>
+      <div class="f full"><span>Logos del informe PDF</span>
+        <div class="logos"><div id="logoList" class="logos"></div><button class="btn ghost" id="b-logo" type="button">+ Agregar logo</button></div>
+        <input type="file" id="f-logo" accept="image/png,image/jpeg,image/webp" hidden></div>
+    </div>
+  </details>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-perf" data-tab="perf">Perforaciones<small id="t-perf-n"></small></button>
+    <button class="tab" role="tab" id="t-geo" data-tab="geo">Geofísica<small id="t-geo-n"></small></button>
+  </div>
+  <nav class="chips" id="chips" aria-label="Registros"></nav>
+  <div id="main"></div>
+</div>
+
+<div class="bar"><div class="in">
+  <button class="btn" id="b-pdf1">PDF perforación</button>
+  <button class="btn ghost" id="b-pdfall">PDF del proyecto</button>
+  <button class="btn ghost" id="b-json">Respaldo</button>
+  <button class="btn ghost" id="b-imp">Importar</button>
+  <input type="file" id="f-imp" accept=".json,application/json" hidden>
+</div></div>
+
+<datalist id="dl-uscs"><option>GW</option><option>GP</option><option>GM</option><option>GC</option><option>SW</option><option>SP</option><option>SM</option><option>SC</option><option>ML</option><option>CL</option><option>OL</option><option>MH</option><option>CH</option><option>OH</option><option>PT</option><option>CL-ML</option><option>SM-SC</option></datalist>
+<datalist id="dl-hum"><option>Seco</option><option>Ligeramente húmedo</option><option>Húmedo</option><option>Muy húmedo</option><option>Saturado</option></datalist>
+<datalist id="dl-con"><option>Muy blanda</option><option>Blanda</option><option>Media</option><option>Firme</option><option>Muy firme</option><option>Dura</option><option>Muy suelta</option><option>Suelta</option><option>Medianamente densa</option><option>Densa</option><option>Muy densa</option></datalist>
+<datalist id="dl-eq"><option>ABEM Terrameter LS 2</option><option>Syscal Pro</option><option>SuperSting R8</option><option>Geode (Geometrics)</option><option>Seistronix RAS-24</option><option>PASI 16S24</option></datalist>
+<datalist id="dl-fuente"><option>Mazo 8 kg</option><option>Mazo 10 kg</option><option>Peso caído</option><option>Ruido ambiental (pasivo)</option></datalist>
+
+<script>
+/* ---------- Materiales, tramas y colores ---------- */
+const MATS={
+  relleno:{n:'Relleno antrópico',u:'',c:'#857B6E',p:'relleno'},
+  organico:{n:'Capa orgánica',u:'OL',c:'#3D2E22',p:'organico'},
+  ceniza:{n:'Ceniza volcánica',u:'MH',c:'#977245',p:'ceniza'},
+  arcilla:{n:'Arcilla',u:'CL',c:'#7E4F3A',p:'arcilla'},
+  limo:{n:'Limo',u:'ML',c:'#8C7456',p:'limo'},
+  arena:{n:'Arena',u:'SM',c:'#A99273',p:'arena'},
+  grava:{n:'Grava',u:'GM',c:'#8E8A80',p:'grava'},
+  res_ign:{n:'Suelo residual de roca ígnea',u:'MH',c:'#A2603B',p:'res_ign'},
+  res_met:{n:'Suelo residual de roca metamórfica',u:'ML',c:'#7D7562',p:'res_met'},
+  res_sed:{n:'Suelo residual de roca sedimentaria',u:'CL',c:'#A79A76',p:'res_sed'},
+  saprolito:{n:'Saprolito / roca meteorizada',u:'',c:'#9B6A40',p:'saprolito'},
+  roca:{n:'Roca',u:'',c:'#6F7275',p:'roca'}
+};
+const PATS={arcilla:'Líneas horizontales',limo:'Trazos discontinuos',arena:'Puntos',grava:'Círculos',relleno:'Cuadrícula diagonal',organico:'Raíces',ceniza:'Uves',
+  res_ign:'Cruces (residual ígneo)',res_met:'Ondas de foliación (residual metamórfico)',res_sed:'Trazos oblicuos y puntos (residual sedimentario)',saprolito:'Diagonales y puntos',roca:'Bloques',liso:'Sin trama'};
+/* Carta Munsell: aproximación sRGB de los colores de suelo más comunes */
+const MUN=[
+ ['10YR 2/1','Negro','#2B2621'],['10YR 2/2','Café muy oscuro','#3D2E22'],['10YR 3/2','Café grisáceo muy oscuro','#4F4234'],['10YR 3/3','Café oscuro','#574330'],
+ ['10YR 4/3','Café','#6E5A45'],['10YR 4/6','Café amarillento oscuro','#7B5A32'],['10YR 5/4','Café amarillento','#8C7456'],['10YR 5/6','Café amarillento','#977245'],
+ ['10YR 5/8','Café amarillento','#9E6F33'],['10YR 6/4','Café amarillento claro','#A99273'],['10YR 6/6','Amarillo parduzco','#B38E5A'],['10YR 7/3','Café muy pálido','#BFAD94'],
+ ['7.5YR 3/4','Café oscuro','#5F3F2A'],['7.5YR 4/4','Café','#7A563B'],['7.5YR 5/6','Café fuerte','#9B6A40'],['7.5YR 5/8','Café fuerte','#A3672F'],
+ ['5YR 3/4','Café rojizo oscuro','#613A29'],['5YR 4/4','Café rojizo','#7E4F3A'],['5YR 5/6','Rojo amarillento','#A2603B'],['2.5YR 3/6','Rojo oscuro','#6E3524'],
+ ['2.5YR 4/6','Rojo','#8E4430'],['10R 4/6','Rojo','#883F33'],['2.5Y 5/2','Café grisáceo','#7D7562'],['2.5Y 6/4','Café amarillento claro','#A79A76'],
+ ['2.5Y 7/4','Amarillo pálido','#BDAE85'],['5Y 5/1','Gris','#7A7A70'],['5Y 6/2','Gris oliva claro','#929078'],['GLEY1 5/10Y','Gris verdoso','#737B70'],
+ ['GLEY2 6/5B','Gris azulado','#8A9196'],['N 3/','Gris muy oscuro','#4A4A49'],['N 5/','Gris','#7B7B7A'],['N 7/','Gris claro','#ADADAC']
+].map(([c,n,h])=>({c,n,h}));
+const MUN_BYLEN=[...MUN].sort((a,b)=>b.c.length-a.c.length);
+const TIPOS=['SPT','Shelby','Alterada','Bolsa'];
+const hex2rgb=h=>{h=String(h||'#888888').replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');return[parseInt(h.slice(0,2),16)||0,parseInt(h.slice(2,4),16)||0,parseInt(h.slice(4,6),16)||0]};
+function lum(h){const c=hex2rgb(h).map(v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
+const inkOn=h=>lum(h)<.16?'#EDE7DA':'#23272A';
+const matOf=e=>MATS[e.mat]||MATS.limo;
+const fillOf=e=>e.col||matOf(e).c;
+const patOf=e=>e.ach||matOf(e).p;
+const munOf=h=>MUN.find(m=>m.h.toLowerCase()===String(h||'').toLowerCase());
+function colorLabel(e){if(!e.col)return`Según material · ${matOf(e).n}`;const m=munOf(e.col);return m?`${m.c} · ${m.n}`:'Color personalizado'}
+function matchMunsell(t){const s=String(t||'').toUpperCase().replace(/\s+/g,'');if(!s)return null;for(const m of MUN_BYLEN){const k=m.c.toUpperCase().replace(/\s+/g,'');if(s.includes(k))return m}return null}
+
+function clip(x1,y1,x2,y2,a,b,c,d){let t0=0,t1=1;const dx=x2-x1,dy=y2-y1;const P=[-dx,dx,-dy,dy],Q=[x1-a,c-x1,y1-b,d-y1];
+  for(let i=0;i<4;i++){if(P[i]===0){if(Q[i]<0)return null}else{const r=Q[i]/P[i];if(P[i]<0){if(r>t1)return null;if(r>t0)t0=r}else{if(r<t0)return null;if(r<t1)t1=r}}}
+  return [x1+t0*dx,y1+t0*dy,x1+t1*dx,y1+t1*dy]}
+function drawPattern(g,k,x,y,w,h,s){
+  if(h<=0||w<=0)return;
+  const L=(a,b,c,d)=>{const r=clip(a,b,c,d,x,y,x+w,y+h);if(r)g.line(...r)};
+  const inR=(cx,cy,r)=>cx-r>=x&&cx+r<=x+w&&cy-r>=y&&cy+r<=y+h;
+  let i=0;
+  switch(k){
+  case'arcilla':for(let yy=y+s*.45;yy<y+h;yy+=s*.6)L(x,yy,x+w,yy);break;
+  case'limo':for(let yy=y+s*.4;yy<y+h;yy+=s*.7,i++){for(let xx=x+(i%2)*s*.6;xx<x+w;xx+=s*1.2)L(xx,yy,xx+s*.6,yy)}break;
+  case'arena':for(let yy=y+s*.3;yy<y+h;yy+=s*.55,i++){for(let xx=x+s*.25+(i%2)*s*.3;xx<x+w;xx+=s*.6)if(inR(xx,yy,s*.07))g.dot(xx,yy,s*.075)}break;
+  case'grava':{const r=s*.36;for(let yy=y+s*.6;yy<y+h;yy+=s*1.1,i++){for(let xx=x+s*.6+(i%2)*s*.65;xx<x+w;xx+=s*1.3)if(inR(xx,yy,r))g.circ(xx,yy,r)}
+    if(h<s*1.2)for(let xx=x+s*.4;xx<x+w;xx+=s*.8)if(inR(xx,y+h/2,s*.08))g.dot(xx,y+h/2,s*.08);break}
+  case'relleno':for(let k2=-h;k2<w;k2+=s*.9){L(x+k2,y+h,x+k2+h,y);L(x+k2,y,x+k2+h,y+h)}break;
+  case'organico':for(let yy=y+s*.75;yy<y+h;yy+=s*.9,i++){for(let xx=x+s*.5+(i%2)*s*.7;xx<x+w-s*.3;xx+=s*1.4){if(yy-s*.3<y)continue;
+    L(xx-s*.3,yy,xx+s*.3,yy);L(xx,yy,xx,yy-s*.32);L(xx-s*.15,yy,xx-s*.3,yy-s*.25);L(xx+s*.15,yy,xx+s*.3,yy-s*.25)}}break;
+  case'ceniza':for(let yy=y+s*.55;yy<y+h;yy+=s*.8,i++){for(let xx=x+s*.4+(i%2)*s*.5;xx<x+w-s*.2;xx+=s*1.0){if(yy-s*.2<y)continue;L(xx-s*.2,yy-s*.2,xx,yy+s*.12);L(xx,yy+s*.12,xx+s*.2,yy-s*.2)}}break;
+  case'res_ign':{const a=s*.2;for(let yy=y+s*.55;yy<y+h;yy+=s*.85,i++)for(let xx=x+s*.45+(i%2)*s*.5;xx<x+w;xx+=s*1.0){L(xx-a,yy,xx+a,yy);L(xx,yy-a,xx,yy+a)}break}
+  case'res_met':{const A=s*.15,lam=s*1.3,st=lam/10;for(let yy=y+s*.45;yy<y+h+A;yy+=s*.7){let px=x,py=yy;for(let xx=x+st;xx<=x+w+st;xx+=st){const ny=yy+A*Math.sin((xx-x)/lam*2*Math.PI);L(px,py,xx,ny);px=xx;py=ny}}break}
+  case'res_sed':for(let yy=y+s*.5;yy<y+h;yy+=s*.8,i++)for(let xx=x+s*.25+(i%2)*s*.55;xx<x+w;xx+=s*1.1){L(xx,yy+s*.2,xx+s*.34,yy-s*.2);if(inR(xx+s*.68,yy,s*.07))g.dot(xx+s*.68,yy,s*.075)}break;
+  case'saprolito':for(let k2=-h;k2<w;k2+=s*1.1)L(x+k2,y+h,x+k2+h,y);
+    for(let yy=y+s*.6;yy<y+h;yy+=s*1.1,i++)for(let xx=x+s*.6+(i%2)*s*.55;xx<x+w;xx+=s*1.1)if(inR(xx,yy,s*.07))g.dot(xx,yy,s*.075);break;
+  case'roca':{const bh=s*.9;for(let yy=y+bh;yy<y+h;yy+=bh)L(x,yy,x+w,yy);
+    for(let yy=y;yy<y+h;yy+=bh,i++)for(let xx=x+(i%2)*s*.8;xx<x+w;xx+=s*1.6)if(xx>x)L(xx,yy,xx,Math.min(yy+bh,y+h));break}
+  }
+}
+function svgG(ink){const o=[];return{o,line:(a,b,c,d)=>o.push(`<line x1="${a.toFixed(1)}" y1="${b.toFixed(1)}" x2="${c.toFixed(1)}" y2="${d.toFixed(1)}"/>`),
+  dot:(x,y,r)=>o.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="${ink}" stroke="none"/>`),
+  circ:(x,y,r)=>o.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}"/>`)}}
+function patSVG(fill,pat,x,y,w,h,s,sw){const ink=inkOn(fill);const g=svgG(ink);drawPattern(g,pat,x,y,w,h,s);
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/><g stroke="${ink}" stroke-width="${sw||.75}" fill="none">${g.o.join('')}</g>`}
+function swatchSVG(e,w,h){return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${patSVG(fillOf(e),patOf(e),0,0,w,h,9)}</svg>`}
+
+/* ---------- Estado ---------- */
+const uid=()=>Math.random().toString(36).slice(2,9);
+const n=v=>{if(v===null||v===undefined||v==='')return NaN;return parseFloat(String(v).replace(',','.'))};
+const f2=v=>isNaN(n(v))?'—':n(v).toFixed(2);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={v:2,pj:{empresa:'',nombre:'',cliente:'',ubicacion:'',sistema:'MAGNA-SIRGAS / Origen Nacional',responsable:''},perfs:[],geo:[],updatedAt:0};
+let cur=null,curG=null,tab='perf';
+try{tab=localStorage.getItem('bitacora-v2-tab')||'perf'}catch(e){}
+function migrate(d){if(!d||typeof d!=='object')return d;d.perfs=Array.isArray(d.perfs)?d.perfs:[];d.geo=Array.isArray(d.geo)?d.geo:[];d.pj=d.pj||{};
+  for(const p of d.perfs){p.estratos=p.estratos||[];p.muestras=p.muestras||[];delete p.prof;for(const e of p.estratos){if(e.col===undefined){const m=matchMunsell(e.color);e.col=m?m.h:''}if(e.ach===undefined)e.ach=''}}
+  d.v=2;return d}
+function ejemplo(){return migrate({ejemplo:true,pj:{empresa:'Consultora de ejemplo',nombre:'Estudio de suelos — Lote La Esperanza',cliente:'Cliente de ejemplo',ubicacion:'Dosquebradas, Risaralda',sistema:'MAGNA-SIRGAS / Origen Nacional',responsable:'Ing. responsable'},
+ perfs:[
+ {id:uid(),codigo:'P-1',fecha:'2026-10-12',gps:'4.83950, -75.66810',lat:4.8395,lon:-75.6681,norte:'',este:'',cota:'',cotaSrc:'',metodo:'Barreno manual + SPT',nf:'3.20',responsable:'',obs:'Perforación detenida por rechazo del barreno en suelo residual denso.',
+  estratos:[
+   {id:uid(),desde:'0',hasta:'0.30',mat:'organico',ach:'',col:'#3D2E22',uscs:'OL',desc:'Suelo orgánico limoso con raíces',color:'Café muy oscuro 10YR 2/2',hum:'Húmedo',con:'Blanda'},
+   {id:uid(),desde:'0.30',hasta:'1.80',mat:'ceniza',ach:'',col:'#977245',uscs:'MH',desc:'Limo arenoso de origen volcánico',color:'Café amarillento 10YR 5/6',hum:'Húmedo',con:'Firme'},
+   {id:uid(),desde:'1.80',hasta:'3.50',mat:'res_ign',ach:'',col:'#A2603B',uscs:'MH',desc:'Limo arcilloso residual de diabasa, con vetas de óxidos',color:'Rojo amarillento 5YR 5/6',hum:'Muy húmedo',con:'Firme'},
+   {id:uid(),desde:'3.50',hasta:'5.00',mat:'saprolito',ach:'',col:'#9B6A40',uscs:'SM',desc:'Saprolito arenoso con fragmentos de roca alterada',color:'Café fuerte 7.5YR 5/6',hum:'Saturado',con:'Densa'}],
+  muestras:[{id:uid(),codigo:'M-1',tipo:'SPT',desde:'1.00',hasta:'1.45',N:'9'},{id:uid(),codigo:'M-2',tipo:'Shelby',desde:'2.00',hasta:'2.60',N:''},{id:uid(),codigo:'M-3',tipo:'SPT',desde:'4.00',hasta:'4.45',N:'28'}]},
+ {id:uid(),codigo:'P-2',fecha:'2026-10-13',gps:'4.84012, -75.66745',lat:4.84012,lon:-75.66745,norte:'',este:'',cota:'',cotaSrc:'',metodo:'Barreno manual',nf:'',responsable:'',obs:'',
+  estratos:[
+   {id:uid(),desde:'0',hasta:'0.60',mat:'relleno',ach:'',col:'',uscs:'',desc:'Relleno heterogéneo con escombros de ladrillo',color:'Café grisáceo',hum:'Ligeramente húmedo',con:'Suelta'},
+   {id:uid(),desde:'0.60',hasta:'2.20',mat:'ceniza',ach:'',col:'#B38E5A',uscs:'MH',desc:'Limo de ceniza volcánica',color:'Amarillo parduzco 10YR 6/6',hum:'Húmedo',con:'Firme'},
+   {id:uid(),desde:'2.20',hasta:'4.00',mat:'res_met',ach:'',col:'#7D7562',uscs:'ML',desc:'Limo arenoso residual de esquisto, foliación visible',color:'Café grisáceo 2.5Y 5/2',hum:'Húmedo',con:'Muy firme'}],
+  muestras:[{id:uid(),codigo:'M-1',tipo:'Alterada',desde:'1.00',hasta:'1.30',N:''}]}],
+ geo:[{id:uid(),codigo:'LT-1',tipo:'ert',fecha:'2026-10-14',equipo:'ABEM Terrameter LS 2',arreglo:'Wenner-Schlumberger',n:'24',esp:'5',
+   ini:{gps:'4.83930, -75.66860'},fin:{gps:'4.83984, -75.66771'},az:'',pts:[],lect:[],disp:[],obs:'Línea paralela a la vía, sobre el talud.'}],
+ updatedAt:Date.now()})}
+const P=()=>S.perfs.find(p=>p.id===cur);
+const G=()=>S.geo.find(g=>g.id===curG);
+const profOf=p=>{const m=Math.max(0,...p.estratos.map(e=>n(e.hasta)||0),...p.muestras.map(s=>n(s.hasta)||n(s.desde)||0));return m||0};
+const profPlot=p=>profOf(p)||1;
+function descOf(e){const m=matOf(e);return[e.desc||m.n,e.color&&('color '+e.color),e.hum&&e.hum.toLowerCase(),e.con&&('consistencia/compacidad '+e.con.toLowerCase())].filter(Boolean).join('; ')+'.'}
+function warnings(p){const w=[];const es=[...p.estratos].sort((a,b)=>n(a.desde)-n(b.desde));
+  es.forEach((e,i)=>{const d=n(e.desde),h=n(e.hasta);if(isNaN(d)||isNaN(h))w.push(`Estrato ${i+1}: falta profundidad inicial o final.`);else if(h<=d)w.push(`Estrato ${i+1}: la profundidad final debe ser mayor que la inicial.`);
+   if(i>0){const ph=n(es[i-1].hasta);if(!isNaN(ph)&&!isNaN(d)&&Math.abs(ph-d)>0.001)w.push(`Entre estrato ${i} y ${i+1}: ${ph<d?'hay un vacío':'hay traslape'} (${ph.toFixed(2)} m / ${d.toFixed(2)} m).`)}});
+  if(es.length&&n(es[0].desde)>0)w.push('El primer estrato no empieza en 0.00 m.');
+  const nf=n(p.nf);if(!isNaN(nf)&&nf>profOf(p))w.push('El nivel freático está por debajo de la profundidad total.');
+  return w}
+
+/* ---------- Coordenadas: WGS84/MAGNA ↔ Origen Nacional CTM12 (EPSG:9377) ---------- */
+function parseLL(s){if(!s)return null;s=String(s).trim();
+  const dms=[...s.matchAll(/(\d+(?:[.,]\d+)?)\s*°\s*(?:(\d+(?:[.,]\d+)?)\s*['′]\s*)?(?:(\d+(?:[.,]\d+)?)\s*["″]\s*)?([NSEWO])?/gi)];
+  if(dms.length>=2){const v=dms.slice(0,2).map(m=>{let d=n(m[1])+(n(m[2])||0)/60+(n(m[3])||0)/3600;const h=(m[4]||'').toUpperCase();if(h==='S'||h==='W'||h==='O')d=-d;return{d,h}});
+    let lat=v[0].d,lon=v[1].d;if(v[0].h==='E'||v[0].h==='W'||v[0].h==='O'){[lat,lon]=[lon,lat]}if(!v[1].h&&!v[0].h&&lon>0)lon=-lon;return ok(lat,lon)}
+  const nums=s.match(/-?\d+(?:\.\d+)?/g);if(!nums||nums.length<2)return null;return ok(parseFloat(nums[0]),parseFloat(nums[1]));
+  function ok(a,b){if(Math.abs(a)>90||Math.abs(b)>180)return null;if(Math.abs(a)>Math.abs(b)&&Math.abs(a)>20)[a,b]=[b,a];return[a,b]}}
+const GRS={a:6378137,f:1/298.257222101,k0:0.9992,lat0:4,lon0:-73,FE:5000000,FN:2000000};
+GRS.e2=2*GRS.f-GRS.f*GRS.f;GRS.ep2=GRS.e2/(1-GRS.e2);
+function mArc(p){const a=GRS.a,e2=GRS.e2;return a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*p-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*p)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*p)-(35*e2**3/3072)*Math.sin(6*p))}
+function toCTM12(lat,lon){const {a,e2,ep2,k0}=GRS,R=Math.PI/180;
+  const p=lat*R,l=lon*R,p0=GRS.lat0*R,l0=GRS.lon0*R;const N=a/Math.sqrt(1-e2*Math.sin(p)**2),T=Math.tan(p)**2,C=ep2*Math.cos(p)**2,A=(l-l0)*Math.cos(p);
+  const x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120);
+  const y=k0*(mArc(p)-mArc(p0)+N*Math.tan(p)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  return{E:GRS.FE+x,N:GRS.FN+y}}
+function fromCTM12(E,Nn){const {a,e2,ep2,k0}=GRS,R=Math.PI/180;const M=mArc(GRS.lat0*R)+(Nn-GRS.FN)/k0;
+  const mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256));const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const C1=ep2*Math.cos(p1)**2,T1=Math.tan(p1)**2,N1=a/Math.sqrt(1-e2*Math.sin(p1)**2),R1=a*(1-e2)/Math.pow(1-e2*Math.sin(p1)**2,1.5),D=(E-GRS.FE)/(N1*k0);
+  const lat=p1-(N1*Math.tan(p1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const lon=GRS.lon0*R+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(p1);
+  return[lat/R,lon/R]}
+const validEN=(E,Nn)=>!isNaN(E)&&!isNaN(Nn)&&E>3.5e6&&E<6.5e6&&Nn>0.8e6&&Nn<3.6e6;
+function gpsNote(v){if(!v)return'Usa tu ubicación o pega la de Google Maps u otra app de GPS: Norte, Este y cota se calculan solos.';const ll=parseLL(v);
+  return ll?`Lat ${ll[0].toFixed(6)}, Long ${ll[1].toFixed(6)} → MAGNA-SIRGAS Origen Nacional (CTM12).`:'No reconozco ese formato. Usa latitud y longitud, por ejemplo 4.81333, -75.69611.'}
+/* aplica GPS o Norte/Este a un objeto con {gps,lat,lon,norte|n,este|e} */
+function fromGps(o,v,kN,kE){o.gps=v;const ll=parseLL(v);if(!ll)return false;o.lat=ll[0];o.lon=ll[1];const r=toCTM12(ll[0],ll[1]);o[kN]=r.N.toFixed(2);o[kE]=r.E.toFixed(2);return true}
+function fromEN(o,kN,kE){const E=n(o[kE]),Nn=n(o[kN]);if(!validEN(E,Nn)){o.lat=null;o.lon=null;return false}const ll=fromCTM12(E,Nn);o.lat=+ll[0].toFixed(7);o.lon=+ll[1].toFixed(7);return true}
+
+/* ---------- Modelo digital de elevación (Copernicus GLO-30, Eje Cafetero) ---------- */
+const DEM={lat0:0,lat1:0,lon0:0,lon1:0,step:0.25,n:900,cache:new Map()};
+const demCovers=()=>false;
+async function demChunk(a,b){const key=a+'_'+b;if(DEM.cache.has(key))return DEM.cache.get(key);
+  /* cada bloque es un PNG "terrain-RGB": decímetros = R·256 + G */
+  const pr=(async()=>{const r=await fetch(`dem/${key}.png`);if(!r.ok)throw new Error('dem '+r.status);const blob=await r.blob();const N=DEM.n;
+    let bmp;try{bmp=await createImageBitmap(blob,{colorSpaceConversion:'none',premultiplyAlpha:'none'})}catch(e){bmp=await loadImage(URL.createObjectURL(blob))}
+    const c=document.createElement('canvas');c.width=N;c.height=N;const x=c.getContext('2d',{willReadFrequently:true,colorSpace:'srgb'});x.drawImage(bmp,0,0);
+    const px=x.getImageData(0,0,N,N).data,v=new Float32Array(N*N);for(let i=0;i<N*N;i++)v[i]=px[i*4]*256+px[i*4+1];return v})();
+  DEM.cache.set(key,pr);pr.catch(()=>DEM.cache.delete(key));return pr}
+async function elevApi(list){const out=[];for(let i=0;i<list.length;i+=100){const ch=list.slice(i,i+100);const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.map(q=>q[0].toFixed(6)).join(',')}&longitude=${ch.map(q=>q[1].toFixed(6)).join(',')}`);
+  if(!r.ok)throw new Error('api '+r.status);const j=await r.json();out.push(...j.elevation)}return out}
+async function elevAt(la,lo){if(la==null||lo==null)return null;if(!demCovers(la,lo)){const z=await elevApi([[la,lo]]);return z[0]}const a=Math.floor((la-DEM.lat0)/DEM.step),b=Math.floor((lo-DEM.lon0)/DEM.step);
+  const v=await demChunk(a,b),N=DEM.n,la0=DEM.lat0+a*DEM.step,lo0=DEM.lon0+b*DEM.step,res=DEM.step/N;
+  let fr=(la0+DEM.step-la)/res-.5,fc=(lo-lo0)/res-.5;fr=Math.max(0,Math.min(N-1.001,fr));fc=Math.max(0,Math.min(N-1.001,fc));
+  const r0=Math.floor(fr),c0=Math.floor(fc),dr=fr-r0,dc=fc-c0;const q=(r,c)=>v[r*N+c];
+  const z=(q(r0,c0)*(1-dc)+q(r0,c0+1)*dc)*(1-dr)+(q(r0+1,c0)*(1-dc)+q(r0+1,c0+1)*dc)*dr;return z/10}
+const DEM_NOTE='Modelo digital de superficie Copernicus GLO-90 (90 m), consultado en Open-Meteo. Valor aproximado: incluye vegetación y construcciones; verifícalo con topografía cuando la obra lo requiera.';
+const GPS_NOTE='Altura medida con el GPS del celular. Puede diferir varios metros de la cota topográfica; verifícala con topografía cuando la obra lo requiera.';
+function cotaNote(o){if(o.cotaSrc==='auto')return'Cota tomada del modelo Copernicus GLO-30 (≈30 m, aproximada).';
+  if(o.cotaSrc==='api')return'Cota tomada en línea del modelo Copernicus GLO-90 (≈90 m, aproximada).';
+  if(o.cotaSrc==='gps')return`Cota del GPS del celular${o.zAcc?` (±${Math.round(o.zAcc)} m)`:''}. Puede diferir varios metros de la topografía.`;
+  if(o.cotaSrc==='fuera')return'Sin conexión para consultar la cota. Usa tu ubicación, escribe la cota o pulsa Tomar cota cuando tengas señal.';
+  if(o.cotaSrc==='error')return'No pude leer el modelo de elevación. Escribe la cota o intenta de nuevo.';
+  if(o.cotaSrc==='manual')return'Cota escrita a mano.';return o.lat!=null?'Calculando cota…':'Usa tu ubicación para tomar la cota del GPS, o pega coordenadas y se consulta en línea.'}
+async function autoCota(o,kz,force){if(o.lat==null||o.lon==null)return false;if(!force&&o.cotaSrc==='manual'&&o[kz]!=='')return false;
+  const loc=demCovers(o.lat,o.lon);
+  try{const z=await elevAt(o.lat,o.lon);if(z==null)return false;o[kz]=(+z).toFixed(1);o.cotaSrc=loc?'auto':'api';return true}catch(e){o.cotaSrc=loc?'error':'fuera';return false}}
+let cotaT=null;function scheduleCota(o,kz,after){clearTimeout(cotaT);cotaT=setTimeout(async()=>{await autoCota(o,kz,false);after&&after();save()},500)}
+
+/* ---------- Geofísica ---------- */
+const GTIPOS={ert:'Tomografía eléctrica (ERT)',sev:'Sondeo eléctrico vertical (SEV)',sr:'Sísmica de refracción',masw:'MASW (ondas superficiales)'};
+const ARREGLOS_ERT=['Wenner','Schlumberger','Wenner-Schlumberger','Dipolo-dipolo','Polo-dipolo','Gradiente'];
+const isElec=g=>g.tipo==='ert'||g.tipo==='sev';
+const unitOf=g=>isElec(g)?'electrodo':'geófono';
+function newLine(tipo){const k={ert:'LT',sev:'SEV',sr:'LS',masw:'MW'}[tipo];const nn=S.geo.filter(g=>g.tipo===tipo).length+1;
+  return{id:uid(),codigo:`${k}-${nn}`,tipo,fecha:new Date().toISOString().slice(0,10),equipo:'',operador:'',arreglo:tipo==='sev'?'Schlumberger':tipo==='ert'?'Wenner-Schlumberger':'',
+    n:tipo==='sev'?'':'24',esp:tipo==='sev'?'':'5',ini:{},fin:{},az:'',pts:[],lect:[],disp:[],frec:tipo==='masw'?'4.5':tipo==='sr'?'14':'',fuente:tipo==='sev'||tipo==='ert'?'':'Mazo 8 kg',apil:'',reg:'',mue:'',obs:''}}
+function azOf(g){const a=g.ini||{},b=g.fin||{};const E0=n(a.e),N0=n(a.n),E1=n(b.e),N1=n(b.n);
+  if(!isNaN(E0)&&!isNaN(N0)&&!isNaN(E1)&&!isNaN(N1)&&(E1!==E0||N1!==N0)){let az=Math.atan2(E1-E0,N1-N0)*180/Math.PI;if(az<0)az+=360;return az}
+  const z=n(g.az);return isNaN(z)?NaN:((z%360)+360)%360}
+function lenOf(g){if(g.tipo==='sev'){const m=Math.max(0,...g.lect.map(l=>n(l.ab2)||0));return m*2}const k=n(g.n),s=n(g.esp);return isNaN(k)||isNaN(s)?NaN:(k-1)*s}
+function distIF(g){const a=g.ini||{},b=g.fin||{};const E0=n(a.e),N0=n(a.n),E1=n(b.e),N1=n(b.n);return [E0,N0,E1,N1].some(isNaN)?NaN:Math.hypot(E1-E0,N1-N0)}
+function posEN(g,d){const a=g.ini||{};const E0=n(a.e),N0=n(a.n),az=azOf(g)*Math.PI/180;if(isNaN(E0)||isNaN(N0)||isNaN(az))return null;return{e:E0+d*Math.sin(az),n:N0+d*Math.cos(az)}}
+function kSev(g,l){const L=n(l.ab2),m=n(l.mn2);if(isNaN(L)||L<=0)return NaN;if(g.arreglo==='Wenner'){const a=2*L/3;return 2*Math.PI*a}if(isNaN(m)||m<=0||m>=L)return NaN;return Math.PI*(L*L-m*m)/(2*m)}
+function rhoOf(g,l){const K=kSev(g,l),R=n(l.R);if(!isNaN(K)&&!isNaN(R))return K*R;return n(l.rho)}
+function geoWarn(g){const w=[];if(g.tipo!=='sev'){const L=lenOf(g),D=distIF(g);if(!isNaN(L)&&!isNaN(D)&&Math.abs(L-D)>Math.max(1,L*.03))w.push(`La distancia entre el primer y el último ${unitOf(g)} (${D.toFixed(1)} m) no coincide con la longitud del tendido (${L.toFixed(1)} m).`);
+  if(g.pts.length&&!isNaN(n(g.n))&&g.pts.length!==n(g.n))w.push(`La tabla tiene ${g.pts.length} ${unitOf(g)}s y el tendido ${n(g.n)}. Genera las coordenadas de nuevo.`)}
+  if(isNaN(azOf(g)))w.push(g.tipo==='sev'?'Falta la orientación (azimut) del sondeo.':`Falta la ubicación del último ${unitOf(g)} o el azimut de la línea.`);return w}
+
+/* ---------- Guardado ---------- */
+let saveT=null;
+const IDB={db:null,async open(){if(this.db)return this.db;this.db=await new Promise((res,rej)=>{const r=indexedDB.open('bitacora-perforaciones',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});return this.db},
+  async get(k){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
+  async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}};
+function setStatus(t,c){const el=document.getElementById('status');el.textContent=t;el.className='pill '+(c||'')}
+function saveLocal(){}
+function save(){S.updatedAt=Date.now();if(S.ejemplo)S.ejemplo=false;clearTimeout(saveT);setStatus('Guardando…','busy');
+  saveT=setTimeout(async()=>{try{await IDB.set('estado',JSON.parse(JSON.stringify(S)));setStatus('Guardado en este dispositivo','ok')}
+   catch(e){try{localStorage.setItem('bitacora-perforaciones',JSON.stringify(S));setStatus('Guardado en este dispositivo','ok')}catch(e2){setStatus('No se pudo guardar: descarga un respaldo','local')}}},600)}
+async function boot(){let d=null;
+  try{d=await IDB.get('estado')}catch(e){}
+  if(!d){try{d=JSON.parse(localStorage.getItem('bitacora-perforaciones')||'null')}catch(e){}}
+  if(d&&d.perfs)S=migrate(d);renderAll();setStatus(d?'Guardado en este dispositivo':'Listo','ok');
+  if(navigator.storage&&navigator.storage.persist){try{navigator.storage.persist()}catch(e){}}}
+/* ---------- Render ---------- */
+function renderAll(){if(!S.perfs.find(p=>p.id===cur))cur=S.perfs[0]?.id||null;if(!S.geo.find(g=>g.id===curG))curG=S.geo[0]?.id||null;renderProj();renderTabs();renderChips();renderMain()}
+function renderLogos(){const L=S.pj.logos||[];document.getElementById('logoList').innerHTML=L.map((l,i)=>`<div class="logo"><img src="${l.data}" alt="Logo ${i+1}"><button class="x" type="button" data-del-logo="${i}" aria-label="Quitar logo ${i+1}">✕</button></div>`).join('');
+  document.getElementById('b-logo').hidden=L.length>=3}
+function renderProj(){renderLogos();for(const k of Object.keys(S.pj)){if(k==='logos')continue;const el=document.getElementById('pj-'+k);if(el)el.value=S.pj[k]||''}
+  document.getElementById('projSum').textContent=[S.pj.nombre,S.pj.ubicacion].filter(Boolean).join(' · ')||'Sin nombre'}
+function renderTabs(){for(const t of ['perf','geo']){const b=document.getElementById('t-'+t);b.setAttribute('aria-selected',String(tab===t))}
+  document.getElementById('t-perf-n').textContent=S.perfs.length;document.getElementById('t-geo-n').textContent=S.geo.length}
+function renderChips(){const c=document.getElementById('chips');
+  if(tab==='perf')c.innerHTML=S.perfs.map(p=>`<button class="chip" data-sel="${p.id}" aria-pressed="${p.id===cur}">${esc(p.codigo||'Sin código')}</button>`).join('')+`<button class="chip add" data-act="addP">+ Perforación</button>`;
+  else c.innerHTML=S.geo.map(g=>`<button class="chip" data-selg="${g.id}" aria-pressed="${g.id===curG}">${esc(g.codigo||'Sin código')}</button>`).join('')+`<button class="chip add" data-act="addG" data-t="ert">+ Tomografía</button><button class="chip add" data-act="addG" data-t="sev">+ SEV</button><button class="chip add" data-act="addG" data-t="sr">+ Refracción</button><button class="chip add" data-act="addG" data-t="masw">+ MASW</button>`}
+function inp(id,k,v,lab,cls='',extra=''){return`<label class="f ${cls}"><span>${lab}</span><input id="${id}" data-k="${k}" value="${esc(v)}" ${extra}></label>`}
+const numA='class="num" inputmode="decimal" autocomplete="off"';
+function renderMain(){if(tab==='geo')renderGeo();else renderPerf();renderBar()}
+function layerHTML(e,i){const mOpts=Object.entries(MATS).map(([key,v])=>`<option value="${key}" ${key===e.mat?'selected':''}>${v.n}</option>`).join('');
+  const pOpts=`<option value="">Según material · ${PATS[matOf(e).p]}</option>`+Object.entries(PATS).map(([k,v])=>`<option value="${k}" ${k===e.ach?'selected':''}>${v}</option>`).join('');
+  const pal=MUN.map(m=>`<button type="button" class="mun" data-act="mun" data-id="${e.id}" data-h="${m.h}" aria-pressed="${(e.col||'').toLowerCase()===m.h.toLowerCase()}" style="background:${m.h}" title="${m.c} · ${m.n}" aria-label="${m.c} ${m.n}"><span>${m.c}</span></button>`).join('');
+  return`<div class="layer" id="ly-${e.id}"><div class="sw" id="sw-${e.id}">${swatchSVG(e,44,140)}</div><div class="body">
+    <div class="layer-h"><b id="eh-${e.id}">Estrato ${i+1} · ${f2(e.desde)}–${f2(e.hasta)} m</b><button class="x" data-del-e="${e.id}" aria-label="Eliminar estrato ${i+1}">Eliminar</button></div>
+    <div class="row3">${inp('e-'+e.id+'-desde','e.'+e.id+'.desde',e.desde,'Desde (m)','',numA)}${inp('e-'+e.id+'-hasta','e.'+e.id+'.hasta',e.hasta,'Hasta (m)','',numA)}${inp('e-'+e.id+'-uscs','e.'+e.id+'.uscs',e.uscs,'USCS','','list="dl-uscs" autocomplete="off"')}</div>
+    <div class="row2 st"><label class="f"><span>Material</span><select id="e-${e.id}-mat" data-k="e.${e.id}.mat">${mOpts}</select></label>
+      <label class="f"><span>Achurado</span><select id="e-${e.id}-ach" data-k="e.${e.id}.ach">${pOpts}</select></label></div>
+    <label class="f"><span>Descripción</span><textarea id="e-${e.id}-desc" data-k="e.${e.id}.desc" rows="2">${esc(e.desc)}</textarea></label>
+    <div class="row3 st">${inp('e-'+e.id+'-color','e.'+e.id+'.color',e.color,'Color (Munsell)','','placeholder="Ej. 10YR 5/6"')}${inp('e-'+e.id+'-hum','e.'+e.id+'.hum',e.hum,'Humedad','','list="dl-hum" autocomplete="off"')}${inp('e-'+e.id+'-con','e.'+e.id+'.con',e.con,'Consistencia','','list="dl-con" autocomplete="off"')}</div>
+    <div class="f"><span>Color en la columna</span><div class="colrow"><button type="button" class="csw" id="cs-${e.id}" data-act="pal" data-id="${e.id}" style="background:${fillOf(e)}" aria-label="Abrir la carta de colores" aria-expanded="false"></button>
+      <span class="cname" id="cn-${e.id}">${esc(colorLabel(e))}</span><button type="button" class="btn ghost sm" data-act="pal" data-id="${e.id}">Carta de colores</button></div>
+      <div class="pal" id="pal-${e.id}" hidden>${pal}<div class="palfoot"><label style="display:flex;gap:6px;align-items:center">Otro color <input type="color" id="e-${e.id}-col" data-k="e.${e.id}.col" value="${fillOf(e)}"></label>
+        <button type="button" class="btn ghost sm" data-act="colAuto" data-id="${e.id}">Usar color del material</button><span>Colores aproximados de la carta Munsell.</span></div></div></div>
+  </div></div>`}
+function renderPerf(){const m=document.getElementById('main');const p=P();
+  if(!p){m.innerHTML=`<div class="empty"><h2>Aún no hay perforaciones</h2><p>Registra cada sondeo con sus estratos y muestras. La columna estratigráfica se dibuja sola mientras escribes y la cota se toma del modelo de elevación cuando pegas las coordenadas.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn" data-act="addP">Nueva perforación</button><button class="btn ghost" data-act="ej">Cargar ejemplo</button></div></div>`;return}
+  const est=p.estratos.map(layerHTML).join('');
+  const mu=p.muestras.map(s=>`<div class="rowS">${inp('m-'+s.id+'-codigo','m.'+s.id+'.codigo',s.codigo,'Código')}
+    <label class="f"><span>Tipo</span><select id="m-${s.id}-tipo" data-k="m.${s.id}.tipo">${TIPOS.map(t=>`<option ${t===s.tipo?'selected':''}>${t}</option>`).join('')}</select></label>
+    ${inp('m-'+s.id+'-desde','m.'+s.id+'.desde',s.desde,'Desde','',numA)}${inp('m-'+s.id+'-hasta','m.'+s.id+'.hasta',s.hasta,'Hasta','',numA)}${inp('m-'+s.id+'-N','m.'+s.id+'.N',s.N,'N SPT','',numA)}
+    <button class="x" data-del-m="${s.id}" aria-label="Eliminar muestra">✕</button></div>`).join('');
+  m.innerHTML=`<div class="work"><div class="card">
+    <div class="sec-h"><h2 id="p-title">Perforación ${esc(p.codigo)}</h2>${S.ejemplo?'<span class="example">Datos de ejemplo</span>':''}</div>
+    <div class="grid">${inp('p-codigo','p.codigo',p.codigo,'Código')}${inp('p-fecha','p.fecha',p.fecha,'Fecha','','type="date"')}${inp('p-norte','p.norte',p.norte,'Norte (m)','',numA)}${inp('p-este','p.este',p.este,'Este (m)','',numA)}
+      <label class="f full"><span>Coordenadas GPS (lat, long)</span><input id="p-gps" data-k="p.gps" value="${esc(p.gps||'')}" placeholder="Ej. 4.81333, -75.69611  o  4°48'48&quot;N 75°41'46&quot;W" autocomplete="off"><button class="btn ghost sm" type="button" data-act="miGps" data-for="p-gps" style="align-self:flex-start;margin-top:4px">Usar mi ubicación</button><small class="note" id="gpsnote">${gpsNote(p.gps)}</small></label>
+      <div class="f span2"><span>Cota (m.s.n.m.)</span><div style="display:flex;gap:6px"><input id="p-cota" data-k="p.cota" value="${esc(p.cota)}" ${numA}><button class="btn ghost sm" data-act="cotaP" type="button" title="Tomar la cota del modelo de elevación">Tomar cota</button></div><small class="note" id="cotanote">${esc(cotaNote(p))}</small></div>
+      <div class="f"><span>Prof. total (m)</span><div class="ro" id="p-prof" aria-live="polite">${profOf(p).toFixed(2)}</div><small class="note">Se calcula con el último estrato.</small></div>
+      ${inp('p-nf','p.nf',p.nf,'Nivel freático (m)','',numA+' placeholder="No encontrado"')}${inp('p-metodo','p.metodo',p.metodo,'Método')}
+      ${inp('p-responsable','p.responsable',p.responsable,'Responsable','span2','placeholder="'+esc(S.pj.responsable||'')+'"')}
+      <label class="f full"><span>Observaciones</span><textarea id="p-obs" data-k="p.obs" rows="2">${esc(p.obs)}</textarea></label></div>
+    <div class="sec-h"><h2>Estratos</h2><span class="hint">de arriba hacia abajo · la profundidad inicial sigue a la final del estrato anterior</span></div>
+    <div class="stack">${est}<button class="btn dash" data-act="addE">+ Agregar estrato</button></div>
+    <div class="sec-h"><h2>Muestras</h2><span class="hint">SPT, Shelby, alteradas</span></div>
+    <div class="stack">${mu}<button class="btn dash" data-act="addM">+ Agregar muestra</button></div>
+    <div class="sec-h"><h2>Registro fotográfico</h2><span class="hint">${(p.fotos||[]).length} fotos · salen en el PDF</span></div>
+    <div class="stack">${(p.fotos||[]).length?`<div class="photos">${(p.fotos||[]).map((f,i)=>`<figure class="ph"><img src="${f.data||''}" loading="lazy" alt="Foto ${i+1} de ${esc(p.codigo)}" onerror="this.style.opacity=.2"><span class="num">Foto ${i+1}</span><button class="x" data-del-f="${f.id}" aria-label="Eliminar foto ${i+1}">✕</button><input id="f-${f.id}-cap" data-k="f.${f.id}.cap" value="${esc(f.cap)}" placeholder="Descripción de la foto"></figure>`).join('')}</div>`:''}
+      <button class="btn dash" data-act="addF">+ Agregar fotos</button><input type="file" id="f-foto" accept="image/*" multiple hidden></div>
+    <div><button class="btn danger" data-act="delP" id="b-delP">Eliminar perforación ${esc(p.codigo)}</button></div>
+  </div>
+  <aside class="sheet" aria-label="Columna estratigráfica"><div class="sheet-h"><h3 id="sh-t">Columna ${esc(p.codigo)}</h3><span id="sh-s"></span></div><div id="svgbox"></div><div class="warn" id="warn"></div><div class="legend" id="leg"></div></aside></div>`;
+  renderPreview()}
+function legendItems(es){const seen=new Map();for(const e of es){const k=e.mat+'|'+patOf(e)+'|'+fillOf(e);if(!seen.has(k)){const mu=e.col?munOf(e.col):null;seen.set(k,{e,label:matOf(e).n+(mu?` (${mu.c})`:'')})}}return[...seen.values()]}
+function wrapTxt(t,max){const w=t.split(/\s+/);const L=[];let c='';for(const x of w){if((c+' '+x).trim().length>max){if(c)L.push(c);c=x}else c=(c+' '+x).trim()}if(c)L.push(c);return L}
+function renderPreview(){const p=P();if(!p||!document.getElementById('svgbox'))return;const prof=profPlot(p);const pxm=prof>12?32:prof>6?44:60;const top=30,W=360,H=top+prof*pxm+28;
+  const X={col:32,colW:58,u:92,uW:34,m:128,mW:44,d:174,dW:186};const o=[];
+  o.push(`<g font-family="JetBrains Mono,monospace" font-size="9" fill="currentColor">`);
+  o.push(`<text x="2" y="${top-10}">m</text><text x="${X.col+2}" y="${top-10}">Columna</text><text x="${X.u+2}" y="${top-10}">USCS</text><text x="${X.m+2}" y="${top-10}">Muestra</text><text x="${X.d+3}" y="${top-10}">Descripción</text></g>`);
+  const es=[...p.estratos].sort((a,b)=>n(a.desde)-n(b.desde));
+  for(const e of es){const d=n(e.desde),h=n(e.hasta);if(isNaN(d)||isNaN(h)||h<=d)continue;const y1=top+d*pxm,y2=top+h*pxm;
+    o.push(patSVG(fillOf(e),patOf(e),X.col,y1,X.colW,y2-y1,9,.7));
+    o.push(`<line x1="${X.col}" y1="${y2}" x2="${W}" y2="${y2}" stroke="var(--paper-line)" stroke-width=".8"/>`);
+    o.push(`<text x="${X.u+X.uW/2}" y="${(y1+y2)/2+3}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="currentColor">${esc(e.uscs||'—')}</text>`);
+    const lines=wrapTxt(descOf(e),34);const maxL=Math.max(1,Math.floor((y2-y1-4)/11));const sh=lines.slice(0,maxL);if(lines.length>maxL)sh[maxL-1]=sh[maxL-1].replace(/.{0,2}$/,'…');
+    sh.forEach((l,i)=>o.push(`<text x="${X.d+3}" y="${y1+11+i*11}" font-size="9.5" fill="currentColor">${esc(l)}</text>`))}
+  const step=prof>12?2:prof>4?1:0.5;
+  for(let z=0;z<=prof+1e-6;z+=step/2){const y=top+z*pxm;const maj=Math.abs(z/step-Math.round(z/step))<1e-6;o.push(`<line x1="${X.col-(maj?7:4)}" y1="${y}" x2="${X.col}" y2="${y}" stroke="currentColor" stroke-width=".7"/>`);
+    if(maj)o.push(`<text x="${X.col-9}" y="${y+3}" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="currentColor">${z.toFixed(step<1?1:0)}</text>`)}
+  for(const s of p.muestras){const d=n(s.desde);if(isNaN(d))continue;let h=n(s.hasta);if(isNaN(h)||h<=d)h=d+0.15;const y1=top+d*pxm,y2=top+h*pxm,x=X.m+3,w=7;
+    if(s.tipo==='Shelby')o.push(`<rect x="${x}" y="${y1}" width="${w}" height="${y2-y1}" fill="currentColor"/>`);
+    else{o.push(`<rect x="${x}" y="${y1}" width="${w}" height="${y2-y1}" fill="none" stroke="currentColor" stroke-width=".9"/>`);if(s.tipo==='SPT')o.push(`<line x1="${x}" y1="${y1}" x2="${x+w}" y2="${y2}" stroke="currentColor" stroke-width=".8"/><line x1="${x+w}" y1="${y1}" x2="${x}" y2="${y2}" stroke="currentColor" stroke-width=".8"/>`)}
+    o.push(`<text x="${x+w+3}" y="${(y1+y2)/2+3}" font-family="JetBrains Mono,monospace" font-size="8.5" fill="currentColor">${esc(s.codigo)}${s.N!==''&&s.N!=null&&!isNaN(n(s.N))?' N='+n(s.N):''}</text>`)}
+  o.push(`<rect x="${X.col}" y="${top}" width="${W-X.col}" height="${prof*pxm}" fill="none" stroke="currentColor" stroke-width="1"/>`);
+  [X.u,X.m,X.d].forEach(x=>o.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${top+prof*pxm}" stroke="var(--paper-line)" stroke-width=".8"/>`));
+  const nf=n(p.nf);if(!isNaN(nf)&&nf<=prof){const y=top+nf*pxm,cx=X.col+X.colW/2;o.push(`<line x1="${X.col}" y1="${y}" x2="${W}" y2="${y}" stroke="var(--water)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M${cx-6} ${y-10}L${cx+6} ${y-10}L${cx} ${y}Z" fill="var(--water)" stroke="#fff" stroke-width=".6"/><text x="${W-3}" y="${y-3}" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="var(--water)">NF ${nf.toFixed(2)} m</text>`)}
+  o.push(`<text x="${X.d+3}" y="${top+prof*pxm+16}" font-family="JetBrains Mono,monospace" font-size="9" fill="currentColor">Fin de la perforación: ${profOf(p).toFixed(2)} m</text>`);
+  document.getElementById('svgbox').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Columna estratigráfica de ${esc(p.codigo)}">${o.join('')}</svg>`;
+  document.getElementById('sh-t').textContent='Columna '+(p.codigo||'');
+  document.getElementById('sh-s').textContent=`${profOf(p).toFixed(2)} m · ${p.estratos.length} estratos${p.cota?` · cota ${p.cota}`:''}`;
+  document.getElementById('warn').innerHTML=warnings(p).map(w=>`<span>⚠ ${esc(w)}</span>`).join('');
+  document.getElementById('leg').innerHTML=legendItems(es).map(it=>`<span><i><svg viewBox="0 0 22 13" preserveAspectRatio="none">${patSVG(fillOf(it.e),patOf(it.e),0,0,22,13,5,.5)}</svg></i>${esc(it.label)}</span>`).join('');
+  const pe=document.getElementById('p-prof');if(pe)pe.textContent=profOf(p).toFixed(2)}
+
+/* ---------- Render geofísica ---------- */
+function coordBlock(g,w,lab){const o=g[w]||{};const k='g'+w;
+  return`<div class="f full"><span>${lab}</span><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr))">
+   <label class="f span2"><span>GPS (lat, long)</span><input id="${k}-gps" data-k="${k}.gps" value="${esc(o.gps||'')}" placeholder="4.81333, -75.69611" autocomplete="off"><button class="btn ghost sm" type="button" data-act="miGps" data-for="${k}-gps" style="align-self:flex-start;margin-top:4px">Usar mi ubicación</button></label>
+   ${inp(k+'-n',k+'.n',o.n,'Norte (m)','',numA)}${inp(k+'-e',k+'.e',o.e,'Este (m)','',numA)}${inp(k+'-z',k+'.z',o.z,'Cota (m)','',numA)}</div>
+   <small class="note" id="${k}-note">${esc(cotaNote(o))}</small></div>`}
+function renderGeo(){const m=document.getElementById('main');const g=G();
+  if(!g){m.innerHTML=`<div class="empty"><h2>Aún no hay líneas geofísicas</h2><p>Registra tomografías eléctricas, sondeos eléctricos verticales, líneas de refracción sísmica y MASW. Con el primer y el último ${'electrodo o geófono'} se calculan las coordenadas y cotas de todo el tendido.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn" data-act="addG" data-t="ert">Tomografía eléctrica</button><button class="btn ghost" data-act="addG" data-t="sev">SEV</button><button class="btn ghost" data-act="addG" data-t="sr">Refracción sísmica</button><button class="btn ghost" data-act="addG" data-t="masw">MASW</button></div></div>`;return}
+  const el=isElec(g),u=unitOf(g),L=lenOf(g),az=azOf(g);
+  const tipoSeg=`<div class="seg" role="group" aria-label="Tipo de ensayo">${Object.entries(GTIPOS).map(([k,v])=>`<button type="button" data-act="gtipo" data-t="${k}" aria-pressed="${g.tipo===k}">${v}</button>`).join('')}</div>`;
+  let params='';
+  if(g.tipo==='ert')params=`<label class="f"><span>Arreglo</span><select id="g-arreglo" data-k="g.arreglo">${ARREGLOS_ERT.map(a=>`<option ${a===g.arreglo?'selected':''}>${a}</option>`).join('')}</select></label>
+    ${inp('g-n','g.n',g.n,'No. de electrodos','',numA)}${inp('g-esp','g.esp',g.esp,'Distancia entre electrodos (m)','',numA)}
+    <div class="f"><span>Longitud del tendido (m)</span><div class="ro" id="g-len">${isNaN(L)?'—':L.toFixed(1)}</div></div>
+    <div class="f"><span>Prof. de investigación (m)</span><div class="ro" id="g-pi">${isNaN(L)?'—':'≈ '+(L/5).toFixed(1)}</div><small class="note">Orientativa: L/5.</small></div>`;
+  else if(g.tipo==='sev')params=`<label class="f"><span>Arreglo</span><select id="g-arreglo" data-k="g.arreglo">${['Schlumberger','Wenner'].map(a=>`<option ${a===g.arreglo?'selected':''}>${a}</option>`).join('')}</select></label>
+    ${inp('g-az','g.az',g.az,'Azimut de AB (°)','',numA+' placeholder="0–360"')}
+    <div class="f"><span>AB máximo (m)</span><div class="ro" id="g-len">${isNaN(L)||!L?'—':L.toFixed(1)}</div></div>`;
+  else params=`${inp('g-n','g.n',g.n,'No. de geófonos','',numA)}${inp('g-esp','g.esp',g.esp,'Distancia entre geófonos (m)','',numA)}
+    <div class="f"><span>Longitud del tendido (m)</span><div class="ro" id="g-len">${isNaN(L)?'—':L.toFixed(1)}</div></div>
+    ${inp('g-frec','g.frec',g.frec,'Frecuencia geófonos (Hz)','',numA)}${inp('g-fuente','g.fuente',g.fuente,'Fuente','span2','list="dl-fuente" autocomplete="off"')}
+    ${inp('g-apil','g.apil',g.apil,'Apilamientos','',numA)}${inp('g-reg','g.reg',g.reg,'Longitud de registro (ms)','',numA)}${inp('g-mue','g.mue',g.mue,'Intervalo de muestreo (ms)','',numA)}`;
+  const coords=g.tipo==='sev'?coordBlock(g,'ini','Centro del sondeo'):coordBlock(g,'ini',`Primer ${u} (No. 1)`)+coordBlock(g,'fin',`Último ${u}`)+
+    inp('g-az','g.az',g.az,'Azimut de la línea (°)','',numA+` placeholder="${isNaN(az)?'Si no hay último '+u:'Calculado: '+az.toFixed(1)}"`);
+  let tables='';
+  if(g.tipo==='sev'){const rows=g.lect.map((l,i)=>{const K=kSev(g,l),rho=rhoOf(g,l);return`<tr><td class="c">${i+1}</td><td><input id="gl-${l.id}-ab2" data-k="gl.${l.id}.ab2" value="${esc(l.ab2)}" ${numA}></td><td><input id="gl-${l.id}-mn2" data-k="gl.${l.id}.mn2" value="${esc(l.mn2)}" ${numA} ${g.arreglo==='Wenner'?'disabled placeholder="AB/3"':''}></td>
+      <td class="c" id="gl-${l.id}-K">${isNaN(K)?'—':K.toFixed(2)}</td><td><input id="gl-${l.id}-R" data-k="gl.${l.id}.R" value="${esc(l.R)}" ${numA}></td><td><input id="gl-${l.id}-rho" data-k="gl.${l.id}.rho" value="${esc(!isNaN(n(l.R))&&!isNaN(K)?rho.toFixed(2):l.rho)}" ${numA} ${!isNaN(n(l.R))&&!isNaN(K)?'readonly':''}></td><td><button class="x" data-del-l="${l.id}" aria-label="Eliminar lectura ${i+1}">✕</button></td></tr>`}).join('');
+    tables=`<div class="sec-h"><h2>Lecturas</h2><span class="hint">K y ρa se calculan solos; si no tienes R, escribe ρa</span></div>
+      <div class="tbl"><table><thead><tr><th>No.</th><th>AB/2 (m)</th><th>MN/2 (m)</th><th>K (m)</th><th style="text-transform:none">R = ΔV/I (Ω)</th><th style="text-transform:none">ρa (Ω·m)</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn dash" style="flex:1" data-act="addL">+ Agregar lectura</button><button class="btn ghost" data-act="serieSev">Serie AB/2 típica</button></div>`}
+  else{const rows=g.pts.map((q,i)=>`<tr><td class="c">${i+1}</td><td><input id="gp-${q.id}-d" data-k="gp.${q.id}.d" value="${esc(q.d)}" ${numA}></td><td><input id="gp-${q.id}-e" data-k="gp.${q.id}.e" value="${esc(q.e)}" ${numA}></td><td><input id="gp-${q.id}-n" data-k="gp.${q.id}.n" value="${esc(q.n)}" ${numA}></td><td><input id="gp-${q.id}-z" data-k="gp.${q.id}.z" value="${esc(q.z)}" ${numA}></td></tr>`).join('');
+    tables=`<div class="sec-h"><h2>Coordenadas de ${u}s</h2><span class="hint">${g.pts.length?g.pts.length+' '+u+'s':'se generan con el primer ' +u+', el azimut y la distancia'}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="genPts">Generar coordenadas</button><button class="btn ghost" data-act="cotasPts" ${g.pts.length?'':'disabled'}>Tomar cotas del modelo</button></div>
+      ${g.pts.length?`<div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>No.</th><th>Distancia (m)</th><th>Este (m)</th><th>Norte (m)</th><th>Cota (m)</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}`;
+    if(!el){const dr=g.disp.map((s,i)=>{const pe=posEN(g,n(s.pos));return`<div class="rowS" style="grid-template-columns:80px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) 30px">${inp('gd-'+s.id+'-codigo','gd.'+s.id+'.codigo',s.codigo,'Disparo')}${inp('gd-'+s.id+'-pos','gd.'+s.id+'.pos',s.pos,'Posición (m)','',numA)}
+        <div class="f"><span>Este / Norte</span><div class="ro" id="gd-${s.id}-en" style="font-size:12px">${pe&&!isNaN(n(s.pos))?pe.e.toFixed(1)+' / '+pe.n.toFixed(1):'—'}</div></div>${inp('gd-'+s.id+'-obs','gd.'+s.id+'.obs',s.obs,'Observación')}<button class="x" data-del-d="${s.id}" aria-label="Eliminar disparo">✕</button></div>`}).join('');
+      tables+=`<div class="sec-h"><h2>Puntos de disparo</h2><span class="hint">posición desde el geófono 1 (negativa antes de él)</span></div><div class="stack">${dr}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn dash" style="flex:1" data-act="addD">+ Agregar disparo</button><button class="btn ghost" data-act="dispStd">Disparos estándar</button></div></div>`}}
+  m.innerHTML=`<div class="work"><div class="card">
+    <div class="sec-h"><h2 id="g-title">${esc(GTIPOS[g.tipo])} ${esc(g.codigo)}</h2>${S.ejemplo?'<span class="example">Datos de ejemplo</span>':''}</div>
+    ${tipoSeg}
+    <div class="grid">${inp('g-codigo','g.codigo',g.codigo,'Código')}${inp('g-fecha','g.fecha',g.fecha,'Fecha','','type="date"')}${inp('g-equipo','g.equipo',g.equipo,'Equipo','span2','list="dl-eq" autocomplete="off"')}${inp('g-operador','g.operador',g.operador,'Operador')}
+      ${params}</div>
+    <div class="sec-h"><h2>Ubicación</h2><span class="hint">pega el GPS o escribe Norte/Este · la cota se toma sola</span></div>
+    <div class="grid">${coords}</div>
+    ${tables}
+    <label class="f"><span>Observaciones</span><textarea id="g-obs" data-k="g.obs" rows="2">${esc(g.obs)}</textarea></label>
+    <div><button class="btn danger" data-act="delG">Eliminar ${esc(g.codigo)}</button></div>
+  </div>
+  <aside class="sheet" aria-label="Esquema de la línea"><div class="sheet-h"><h3 id="gsh-t">${esc(g.codigo)}</h3><span id="gsh-s"></span></div><div id="gbox"></div><div class="warn" id="gwarn"></div></aside></div>`;
+  renderGeoPreview()}
+function niceStep(r){const p=Math.pow(10,Math.floor(Math.log10(r)));for(const k of [1,2,5,10])if(k*p>=r)return k*p;return 10*p}
+function geoPts(g){if(g.tipo==='sev')return[];return g.pts.filter(q=>!isNaN(n(q.e))&&!isNaN(n(q.n)))}
+function renderGeoPreview(){const g=G();if(!g||!document.getElementById('gbox'))return;const o=[];const W=360;
+  const L=lenOf(g),az=azOf(g);document.getElementById('gsh-s').textContent=[GTIPOS[g.tipo].split(' (')[0],!isNaN(L)&&L?`${L.toFixed(0)} m`:'',!isNaN(az)?`az ${az.toFixed(0)}°`:''].filter(Boolean).join(' · ');
+  if(g.tipo==='sev'){const pts=g.lect.map(l=>({x:n(l.ab2),y:rhoOf(g,l)})).filter(q=>q.x>0&&q.y>0).sort((a,b)=>a.x-b.x);
+    o.push(`<h4>Curva de resistividad aparente</h4>`);
+    if(pts.length<2)o.push(`<p class="note">Agrega al menos dos lecturas con AB/2 y ρa para ver la curva.</p>`);
+    else{const H=260,ml=40,mb=30,mt=10,mr=10;const lx=[Math.floor(Math.log10(Math.min(...pts.map(p=>p.x)))),Math.ceil(Math.log10(Math.max(...pts.map(p=>p.x))))],ly=[Math.floor(Math.log10(Math.min(...pts.map(p=>p.y)))),Math.ceil(Math.log10(Math.max(...pts.map(p=>p.y))))];
+      if(lx[1]===lx[0])lx[1]++;if(ly[1]===ly[0])ly[1]++;const X=v=>ml+(Math.log10(v)-lx[0])/(lx[1]-lx[0])*(W-ml-mr),Y=v=>mt+(1-(Math.log10(v)-ly[0])/(ly[1]-ly[0]))*(H-mt-mb);
+      const s=[];for(let d=lx[0];d<=lx[1];d++){for(let k=1;k<10;k++){const v=k*10**d;if(Math.log10(v)>lx[1]+1e-9)break;s.push(`<line x1="${X(v)}" y1="${mt}" x2="${X(v)}" y2="${H-mb}" stroke="var(--paper-line)" stroke-width="${k===1?.6:.25}"/>`)}if(true)s.push(`<text x="${X(10**d)}" y="${H-mb+12}" text-anchor="middle" font-size="9" fill="currentColor">${10**d}</text>`)}
+      for(let d=ly[0];d<=ly[1];d++){for(let k=1;k<10;k++){const v=k*10**d;if(Math.log10(v)>ly[1]+1e-9)break;s.push(`<line x1="${ml}" y1="${Y(v)}" x2="${W-mr}" y2="${Y(v)}" stroke="var(--paper-line)" stroke-width="${k===1?.6:.25}"/>`)}s.push(`<text x="${ml-4}" y="${Y(10**d)+3}" text-anchor="end" font-size="9" fill="currentColor">${10**d}</text>`)}
+      s.push(`<polyline points="${pts.map(p=>X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ')}" fill="none" stroke="var(--water)" stroke-width="1.6"/>`);
+      pts.forEach(p=>s.push(`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="2.6" fill="var(--paper)" stroke="var(--water)" stroke-width="1.3"/>`));
+      s.push(`<text x="${(ml+W-mr)/2}" y="${H-4}" text-anchor="middle" font-size="9.5" fill="currentColor">AB/2 (m)</text><text x="10" y="${(mt+H-mb)/2}" transform="rotate(-90 10 ${(mt+H-mb)/2})" text-anchor="middle" font-size="9.5" fill="currentColor">ρa (Ω·m)</text>`);
+      o.push(`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de resistividad aparente" font-family="JetBrains Mono,monospace">${s.join('')}</svg>`)}}
+  else{const pts=geoPts(g);o.push(`<h4>Planta del tendido</h4>`);
+    if(pts.length<2)o.push(`<p class="note">Genera las coordenadas para ver la planta y el perfil.</p>`);
+    else{o.push(planSVG([{g,pts}],[],W,230,true));
+      const zs=pts.filter(q=>!isNaN(n(q.z))&&!isNaN(n(q.d)));
+      if(zs.length>=2){o.push(`<h4>Perfil topográfico</h4>`);const H=150,ml=44,mb=28,mt=10,mr=10;const d0=Math.min(...zs.map(q=>n(q.d))),d1=Math.max(...zs.map(q=>n(q.d)));let z0=Math.min(...zs.map(q=>n(q.z))),z1=Math.max(...zs.map(q=>n(q.z)));
+        if(z1-z0<2){z0-=1;z1+=1}const pad=(z1-z0)*.12;z0-=pad;z1+=pad;const X=v=>ml+(v-d0)/((d1-d0)||1)*(W-ml-mr),Y=v=>mt+(1-(v-z0)/(z1-z0))*(H-mt-mb);const st=niceStep((z1-z0)/4),sx=niceStep((d1-d0)/5);const s=[];
+        for(let v=Math.ceil(z0/st)*st;v<=z1;v+=st)s.push(`<line x1="${ml}" y1="${Y(v)}" x2="${W-mr}" y2="${Y(v)}" stroke="var(--paper-line)" stroke-width=".3"/><text x="${ml-4}" y="${Y(v)+3}" text-anchor="end" font-size="9" fill="currentColor">${+v.toFixed(1)}</text>`);
+        for(let v=Math.ceil(d0/sx)*sx;v<=d1+1e-6;v+=sx)s.push(`<text x="${X(v)}" y="${H-mb+12}" text-anchor="middle" font-size="9" fill="currentColor">${+v.toFixed(0)}</text>`);
+        s.push(`<path d="M${X(d0)} ${H-mb} ${zs.map(q=>`L${X(n(q.d)).toFixed(1)} ${Y(n(q.z)).toFixed(1)}`).join(' ')} L${X(d1)} ${H-mb}Z" fill="var(--paper-line)" fill-opacity=".18" stroke="none"/>`);
+        s.push(`<polyline points="${zs.map(q=>X(n(q.d)).toFixed(1)+','+Y(n(q.z)).toFixed(1)).join(' ')}" fill="none" stroke="currentColor" stroke-width="1.3"/>`);
+        zs.forEach(q=>s.push(`<path d="M${X(n(q.d)).toFixed(1)} ${(Y(n(q.z))-1).toFixed(1)}l-2.5 -5h5z" fill="var(--water)"/>`));
+        s.push(`<text x="${(ml+W-mr)/2}" y="${H-3}" text-anchor="middle" font-size="9.5" fill="currentColor">Distancia (m)</text><text x="10" y="${(mt+H-mb)/2}" transform="rotate(-90 10 ${(mt+H-mb)/2})" text-anchor="middle" font-size="9.5" fill="currentColor">Cota (m)</text>`);
+        o.push(`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Perfil topográfico de la línea" font-family="JetBrains Mono,monospace">${s.join('')}</svg>`)}}}
+  document.getElementById('gbox').innerHTML=o.join('');document.getElementById('gwarn').innerHTML=geoWarn(g).map(w=>`<span>⚠ ${esc(w)}</span>`).join('')}
+/* planta en SVG: lines=[{g,pts}], bores=[{codigo,e,n}] */
+function planSVG(lines,bores,W,H,showNums){const all=[];lines.forEach(l=>l.pts.forEach(q=>all.push([n(q.e),n(q.n)])));bores.forEach(b=>all.push([b.e,b.n]));
+  lines.forEach(l=>{if(l.g.tipo!=='sev')for(const s of l.g.disp){const pe=posEN(l.g,n(s.pos));if(pe&&!isNaN(n(s.pos)))all.push([pe.e,pe.n])}});
+  if(!all.length)return'';let x0=Math.min(...all.map(a=>a[0])),x1=Math.max(...all.map(a=>a[0])),y0=Math.min(...all.map(a=>a[1])),y1=Math.max(...all.map(a=>a[1]));
+  const span=Math.max(x1-x0,y1-y0,20);const cx=(x0+x1)/2,cy=(y0+y1)/2;const m=22;const sc=Math.min((W-2*m)/span,(H-2*m)/span);
+  const X=e=>W/2+(e-cx)*sc,Y=v=>H/2-(v-cy)*sc;const s=[`<rect x=".5" y=".5" width="${W-1}" height="${H-1}" fill="none" stroke="var(--paper-line)" stroke-width=".6"/>`];
+  lines.forEach(l=>{const p=l.pts;if(p.length>1)s.push(`<polyline points="${p.map(q=>X(n(q.e)).toFixed(1)+','+Y(n(q.n)).toFixed(1)).join(' ')}" fill="none" stroke="currentColor" stroke-width="1"/>`);
+    p.forEach((q,i)=>{s.push(`<circle cx="${X(n(q.e)).toFixed(1)}" cy="${Y(n(q.n)).toFixed(1)}" r="${showNums?2.2:1.4}" fill="${isElec(l.g)?'var(--ochre)':'var(--water)'}"/>`)});
+    if(p.length){const a=p[0],b=p[p.length-1];s.push(`<text x="${(X(n(a.e))+5).toFixed(1)}" y="${(Y(n(a.n))-5).toFixed(1)}" font-size="9" font-weight="600" fill="currentColor">${showNums?'1':esc(l.g.codigo)}</text>`);
+      if(showNums)s.push(`<text x="${(X(n(b.e))+5).toFixed(1)}" y="${(Y(n(b.n))-5).toFixed(1)}" font-size="9" font-weight="600" fill="currentColor">${p.length}</text>`)}
+    if(l.g.tipo!=='sev')for(const d of l.g.disp){const pe=posEN(l.g,n(d.pos));if(!pe||isNaN(n(d.pos)))continue;const xx=X(pe.e),yy=Y(pe.n);s.push(`<path d="M${xx.toFixed(1)} ${(yy-5).toFixed(1)}l4.5 8h-9z" fill="var(--warn)"/>`);if(showNums)s.push(`<text x="${(xx+6).toFixed(1)}" y="${(yy+10).toFixed(1)}" font-size="8" fill="var(--warn)">${esc(d.codigo)}</text>`)}});
+  bores.forEach(b=>{const xx=X(b.e),yy=Y(b.n);s.push(`<circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="4" fill="var(--paper)" stroke="currentColor" stroke-width="1.2"/><circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="1.4" fill="currentColor"/><text x="${(xx+6).toFixed(1)}" y="${(yy+3).toFixed(1)}" font-size="9" font-weight="600" fill="currentColor">${esc(b.codigo)}</text>`)});
+  const bar=niceStep(span/4),bw=bar*sc;s.push(`<g font-size="8.5" fill="currentColor"><line x1="10" y1="${H-10}" x2="${10+bw}" y2="${H-10}" stroke="currentColor" stroke-width="2"/><text x="10" y="${H-14}">0</text><text x="${10+bw}" y="${H-14}" text-anchor="middle">${bar} m</text></g>`);
+  s.push(`<g transform="translate(${W-16},18)"><path d="M0 -10L4 4L0 1L-4 4Z" fill="currentColor"/><text y="14" text-anchor="middle" font-size="9" font-weight="600" fill="currentColor">N</text></g>`);
+  return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Planta" font-family="JetBrains Mono,monospace">${s.join('')}</svg>`}
+function renderBar(){const b1=document.getElementById('b-pdf1');if(tab==='geo'){b1.textContent='PDF línea';b1.disabled=!G()}else{b1.textContent='PDF perforación';b1.disabled=!P()}
+  document.getElementById('b-pdfall').disabled=!(S.perfs.length||S.geo.length);document.getElementById('b-json').disabled=!(S.perfs.length||S.geo.length)}
+
+/* ---------- Eventos ---------- */
+function setVal(id,v){const el=document.getElementById(id);if(el&&document.activeElement!==el)el.value=v}
+function afterCotaPerf(){const p=P();if(!p)return;setVal('p-cota',p.cota||'');const nt=document.getElementById('cotanote');if(nt)nt.textContent=cotaNote(p);renderPreview()}
+function afterCotaGeo(w){const g=G();if(!g)return;const o=g[w];setVal(`g${w}-z`,o.z||'');const nt=document.getElementById(`g${w}-note`);if(nt)nt.textContent=cotaNote(o);renderGeoPreview()}
+document.addEventListener('input',ev=>{const k=ev.target.dataset&&ev.target.dataset.k;if(!k)return;const v=ev.target.value;const [t,a,b]=k.split('.');
+  if(t==='pj'){S.pj[a]=v;document.getElementById('projSum').textContent=[S.pj.nombre,S.pj.ubicacion].filter(Boolean).join(' · ')||'Sin nombre';save();return}
+  if(t[0]==='g'){geoInput(t,a,b,v,ev.target);return}
+  const p=P();if(!p)return;
+  if(t==='p'&&a==='gps'){if(fromGps(p,v,'norte','este')){setVal('p-norte',p.norte);setVal('p-este',p.este);if(p.cotaSrc!=='manual'){p.cotaSrc='';document.getElementById('cotanote').textContent=cotaNote(p)}scheduleCota(p,'cota',afterCotaPerf)}document.getElementById('gpsnote').textContent=gpsNote(v);save();return}
+  if(t==='p'&&(a==='norte'||a==='este')){p[a]=v;if(fromEN(p,'norte','este')){if(p.cotaSrc!=='manual')p.cotaSrc='';scheduleCota(p,'cota',afterCotaPerf)}save();return}
+  if(t==='p'&&a==='cota'){p.cota=v;p.cotaSrc=v.trim()?'manual':'';document.getElementById('cotanote').textContent=cotaNote(p);renderPreview();save();return}
+  if(t==='p'){p[a]=v;if(a==='codigo'){renderChips();document.getElementById('p-title').textContent='Perforación '+v;document.getElementById('b-delP').textContent='Eliminar perforación '+v}}
+  if(t==='e'){const e=p.estratos.find(x=>x.id===a);if(!e)return;const old=e[b];e[b]=v;
+    if(b==='hasta'){const i=p.estratos.indexOf(e),nx=p.estratos[i+1];if(nx&&(nx.desde===''||nx.desde===old)){nx.desde=v;setVal('e-'+nx.id+'-desde',v);const h=document.getElementById('eh-'+nx.id);if(h)h.textContent=`Estrato ${i+2} · ${f2(nx.desde)}–${f2(nx.hasta)} m`}}
+    const i=p.estratos.indexOf(e);document.getElementById('eh-'+a).textContent=`Estrato ${i+1} · ${f2(e.desde)}–${f2(e.hasta)} m`;
+    if(b==='mat'){if(!e.uscs&&MATS[v].u){e.uscs=MATS[v].u}renderPerf();renderBar();const s=document.getElementById('e-'+a+'-mat');s&&s.focus();save();return}
+    if(b==='ach'){refreshLayer(e)}
+    if(b==='col'){refreshLayer(e)}
+    if(b==='color'){const m=matchMunsell(v);if(m&&(e.col||'').toLowerCase()!==m.h.toLowerCase()){e.col=m.h;refreshLayer(e)}}}
+  if(t==='m'){const s=p.muestras.find(x=>x.id===a);if(s)s[b]=v}
+  if(t==='f'){const fo=(p.fotos||[]).find(x=>x.id===a);if(fo)fo[b]=v;save();return}
+  renderPreview();save()});
+function refreshLayer(e){const sw=document.getElementById('sw-'+e.id);if(sw)sw.innerHTML=swatchSVG(e,44,140);const cs=document.getElementById('cs-'+e.id);if(cs)cs.style.background=fillOf(e);
+  const cn=document.getElementById('cn-'+e.id);if(cn)cn.textContent=colorLabel(e);const ci=document.getElementById('e-'+e.id+'-col');if(ci&&document.activeElement!==ci)ci.value=fillOf(e);
+  document.querySelectorAll(`#pal-${e.id} .mun`).forEach(b=>b.setAttribute('aria-pressed',String((e.col||'').toLowerCase()===b.dataset.h.toLowerCase())));renderPreview()}
+function geoInput(t,a,b,v,el){const g=G();if(!g)return;
+  if(t==='g'){g[a]=v;if(a==='codigo'){renderChips();document.getElementById('g-title').textContent=GTIPOS[g.tipo]+' '+v}
+    if(a==='arreglo'&&g.tipo==='sev'){renderGeo();save();return}
+    if(a==='n'||a==='esp'){const L=lenOf(g);const le=document.getElementById('g-len');if(le)le.textContent=isNaN(L)?'—':L.toFixed(1);const pi=document.getElementById('g-pi');if(pi)pi.textContent=isNaN(L)?'—':'≈ '+(L/5).toFixed(1)}
+    renderGeoPreview();save();return}
+  if(t==='gini'||t==='gfin'){const w=t.slice(1);const o=g[w]=g[w]||{};
+    if(a==='gps'){if(fromGps(o,v,'n','e')){setVal(`${t}-n`,o.n);setVal(`${t}-e`,o.e);if(o.cotaSrc!=='manual')o.cotaSrc='';scheduleCota(o,'z',()=>afterCotaGeo(w))}}
+    else if(a==='n'||a==='e'){o[a]=v;if(fromEN(o,'n','e')){if(o.cotaSrc!=='manual')o.cotaSrc='';scheduleCota(o,'z',()=>afterCotaGeo(w))}}
+    else if(a==='z'){o.z=v;o.cotaSrc=v.trim()?'manual':''}
+    const nt=document.getElementById(`${t}-note`);if(nt)nt.textContent=cotaNote(o);
+    const az=document.getElementById('g-az');if(az&&g.tipo!=='sev'){const z=azOf(g);az.placeholder=isNaN(n(g.az))&&!isNaN(z)?'Calculado: '+z.toFixed(1):'Si no hay último '+unitOf(g)}
+    renderGeoPreview();save();return}
+  if(t==='gp'){const q=g.pts.find(x=>x.id===a);if(q)q[b]=v;renderGeoPreview();save();return}
+  if(t==='gl'){const l=g.lect.find(x=>x.id===a);if(!l)return;l[b]=v;const K=kSev(g,l);const kc=document.getElementById(`gl-${a}-K`);if(kc)kc.textContent=isNaN(K)?'—':K.toFixed(2);
+    const ri=document.getElementById(`gl-${a}-rho`);if(ri&&b!=='rho'){if(!isNaN(n(l.R))&&!isNaN(K)){ri.value=(K*n(l.R)).toFixed(2);ri.readOnly=true;l.rho=ri.value}else ri.readOnly=false}
+    renderGeoPreview();save();return}
+  if(t==='gd'){const s=g.disp.find(x=>x.id===a);if(!s)return;s[b]=v;if(b==='pos'){const pe=posEN(g,n(v));const c=document.getElementById(`gd-${a}-en`);if(c)c.textContent=pe&&!isNaN(n(v))?pe.e.toFixed(1)+' / '+pe.n.toFixed(1):'—'}renderGeoPreview();save();return}}
+document.addEventListener('click',async ev=>{const t=ev.target.closest('button');if(!t)return;
+  if(t.dataset.tab){tab=t.dataset.tab;try{localStorage.setItem('bitacora-v2-tab',tab)}catch(e){}renderTabs();renderChips();renderMain();return}
+  if(t.dataset.sel){cur=t.dataset.sel;renderChips();renderMain();return}
+  if(t.dataset.selg){curG=t.dataset.selg;renderChips();renderMain();return}
+  if(t.id==='b-logo'){document.getElementById('f-logo').click();return}
+  if(t.dataset.delLogo!==undefined){S.pj.logos.splice(+t.dataset.delLogo,1);renderLogos();save();return}
+  const p=P(),g=G();
+  switch(t.id){
+  case'b-pdf1':if(tab==='geo'){if(g)exportPdf([],[g],`Linea_${(g.codigo||'').replace(/[^\w-]+/g,'_')}.pdf`,false)}else if(p)exportPdf([p],[],`Perforacion_${(p.codigo||'').replace(/[^\w-]+/g,'_')}.pdf`,false);return;
+  case'b-pdfall':exportPdf(S.perfs,S.geo,`Informe_${(S.pj.nombre||'proyecto').replace(/[^\wÁÉÍÓÚáéíóúñÑ-]+/g,'_').slice(0,60)}.pdf`,true);return;
+  case'b-json':saveFile(`Respaldo_bitacora_${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1));return;
+  case'b-imp':document.getElementById('f-imp').click();return}
+  const act=t.dataset.act;
+  if(act){switch(act){
+  case'addP':{const num=S.perfs.length+1;const np={id:uid(),codigo:'P-'+num,fecha:new Date().toISOString().slice(0,10),norte:'',este:'',gps:'',lat:null,lon:null,cota:'',cotaSrc:'',metodo:p?p.metodo:'',nf:'',responsable:'',obs:'',
+     estratos:[{id:uid(),desde:'0',hasta:'0.30',mat:'organico',ach:'',col:'',uscs:'OL',desc:'',color:'',hum:'',con:''}],muestras:[]};S.perfs.push(np);cur=np.id;tab='perf';renderTabs();renderChips();renderMain();save();return}
+  case'ej':S=ejemplo();cur=null;curG=null;renderAll();saveLocal();save();
+    for(const q of S.perfs){await autoCota(q,'cota',false)}for(const l of S.geo){fromGps(l.ini,l.ini.gps,'n','e');fromGps(l.fin,l.fin.gps,'n','e');await autoCota(l.ini,'z');await autoCota(l.fin,'z');genPts(l);await cotasPts(l)}
+    for(const q of S.perfs){if(q.lat!=null){const r=toCTM12(q.lat,q.lon);q.norte=r.N.toFixed(2);q.este=r.E.toFixed(2)}}renderAll();saveLocal();save();return;
+  case'addE':{const last=p.estratos[p.estratos.length-1];const d=last?last.hasta:'0';const h=isNaN(n(d))?'':(n(d)+0.5).toFixed(2);
+     p.estratos.push({id:uid(),desde:d,hasta:h,mat:last?last.mat:'limo',ach:'',col:'',uscs:last?last.uscs:'',desc:'',color:'',hum:last?last.hum:'',con:''});renderMain();save();
+     const ly=document.getElementById('ly-'+p.estratos[p.estratos.length-1].id);ly&&ly.scrollIntoView({block:'center'});return}
+  case'addM':p.muestras.push({id:uid(),codigo:'M-'+(p.muestras.length+1),tipo:'SPT',desde:'',hasta:'',N:''});renderMain();save();return;
+  case'addF':document.getElementById('f-foto').click();return;
+  case'delP':ask(`¿Eliminar la perforación ${p.codigo} con sus estratos y muestras?`,'Eliminar',()=>{S.perfs=S.perfs.filter(x=>x.id!==p.id);cur=null;renderAll();save()});return;
+  case'cotaP':{if(p.lat==null){toast('Primero pega el GPS o escribe Norte y Este');return}p.cotaSrc='';const nt=document.getElementById('cotanote');nt.textContent='Calculando cota…';await autoCota(p,'cota',true);afterCotaPerf();save();return}
+  case'miGps':{const inpEl=document.getElementById(t.dataset.for);if(!inpEl)return;if(!navigator.geolocation){toast('Este navegador no da la ubicación');return}toast('Buscando tu ubicación…');
+    navigator.geolocation.getCurrentPosition(pos=>{const c=pos.coords;inpEl.value=`${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`;inpEl.dispatchEvent(new Event('input',{bubbles:true}));
+      const id=t.dataset.for;let o=null,kz='cota',after=afterCotaPerf;if(id==='p-gps')o=P();else{const w=id==='gini-gps'?'ini':'fin';const gg=G();if(gg){o=gg[w];kz='z';after=()=>afterCotaGeo(w)}}
+      if(o&&c.altitude!=null&&isFinite(c.altitude)){clearTimeout(cotaT);o[kz]=c.altitude.toFixed(1);o.cotaSrc='gps';o.zAcc=c.altitudeAccuracy||null;after();save();
+        toast(`Ubicación ±${Math.round(c.accuracy)} m · altura ${c.altitude.toFixed(1)} m${c.altitudeAccuracy?` (±${Math.round(c.altitudeAccuracy)} m)`:''}`)}
+      else toast(`Ubicación ±${Math.round(c.accuracy)} m · tu celular no dio la altura, la cota se consulta en línea`)},
+      err=>toast(err.code===1?'Permite el acceso a la ubicación en el navegador':'No se pudo obtener la ubicación. Intenta al aire libre.'),{enableHighAccuracy:true,timeout:20000,maximumAge:0});return}
+  case'pal':{const pl=document.getElementById('pal-'+t.dataset.id);if(pl){pl.hidden=!pl.hidden;const cs=document.getElementById('cs-'+t.dataset.id);cs&&cs.setAttribute('aria-expanded',String(!pl.hidden))}return}
+  case'mun':{const e=p.estratos.find(x=>x.id===t.dataset.id);if(!e)return;const m=munOf(t.dataset.h);e.col=t.dataset.h;if(m){e.color=`${m.n} ${m.c}`;setVal('e-'+e.id+'-color',e.color)}refreshLayer(e);save();return}
+  case'colAuto':{const e=p.estratos.find(x=>x.id===t.dataset.id);if(!e)return;e.col='';refreshLayer(e);save();return}
+  case'addG':{const ng=newLine(t.dataset.t);S.geo.push(ng);curG=ng.id;tab='geo';try{localStorage.setItem('bitacora-v2-tab',tab)}catch(e){}renderTabs();renderChips();renderMain();save();return}
+  case'gtipo':{g.tipo=t.dataset.t;if(g.tipo==='sev'&&!['Schlumberger','Wenner'].includes(g.arreglo))g.arreglo='Schlumberger';if(g.tipo==='ert'&&!ARREGLOS_ERT.includes(g.arreglo))g.arreglo='Wenner-Schlumberger';renderGeo();renderBar();save();return}
+  case'genPts':{if(!genPts(g))return;renderGeo();save();toast(`${g.pts.length} ${unitOf(g)}s generados. Tomando cotas…`);await cotasPts(g);if(G()===g)renderGeo();save();return}
+  case'cotasPts':{toast('Tomando cotas del modelo…');const k=await cotasPts(g);if(G()===g)renderGeo();save();toast(k?`Cota tomada en ${k} ${unitOf(g)}s`:'No se pudieron tomar las cotas. Revisa la conexión.');return}
+  case'addL':{const last=g.lect[g.lect.length-1];g.lect.push({id:uid(),ab2:'',mn2:last?last.mn2:'0.5',R:'',rho:''});renderGeo();save();return}
+  case'serieSev':{if(g.lect.length&&g.lect.some(l=>l.R||l.rho)){toast('Ya hay lecturas: borra la tabla para usar la serie típica');return}
+    const ab=[1,1.5,2,3,4,5,6,8,10,15,20,25,30,40,50,60,80,100,150,200];g.lect=ab.map(v=>({id:uid(),ab2:String(v),mn2:v<6?'0.5':v<30?'2':v<100?'5':'10',R:'',rho:''}));renderGeo();save();return}
+  case'addD':{g.disp.push({id:uid(),codigo:'D-'+(g.disp.length+1),pos:'',obs:''});renderGeo();save();return}
+  case'dispStd':{const L=lenOf(g),s=n(g.esp);if(isNaN(L)||isNaN(s)){toast('Escribe el número de geófonos y la distancia entre ellos');return}
+    const pos=g.tipo==='masw'?[-2*s,L+2*s]:[-s/2,L*.25,L/2,L*.75,L+s/2];g.disp=pos.map((v,i)=>({id:uid(),codigo:'D-'+(i+1),pos:v.toFixed(1),obs:i===0?'Directo':i===pos.length-1?'Inverso':''}));renderGeo();save();return}
+  case'delG':ask(`¿Eliminar ${g.codigo} con sus coordenadas y lecturas?`,'Eliminar',()=>{S.geo=S.geo.filter(x=>x.id!==g.id);curG=null;renderAll();save()});return}}
+  if(t.dataset.delF){const fo=(p.fotos||[]).find(x=>x.id===t.dataset.delF);ask('¿Eliminar esta foto del registro?','Eliminar',async()=>{const pp=P();pp.fotos=pp.fotos.filter(x=>x!==fo);renderMain();save();
+    });return}
+  if(t.dataset.delE){const e=p.estratos.find(x=>x.id===t.dataset.delE);ask('¿Eliminar este estrato?','Eliminar',()=>{p.estratos=p.estratos.filter(x=>x!==e);renderMain();save()});return}
+  if(t.dataset.delM){p.muestras=p.muestras.filter(x=>x.id!==t.dataset.delM);renderMain();save();return}
+  if(t.dataset.delL){g.lect=g.lect.filter(x=>x.id!==t.dataset.delL);renderGeo();save();return}
+  if(t.dataset.delD){g.disp=g.disp.filter(x=>x.id!==t.dataset.delD);renderGeo();save();return}});
+function genPts(g){const k=n(g.n),s=n(g.esp);if(isNaN(k)||k<2||isNaN(s)||s<=0){toast(`Escribe el número de ${unitOf(g)}s y la distancia entre ellos`);return false}
+  if(k>400){toast('Máximo 400 puntos por línea');return false}
+  const a=g.ini||{};if(isNaN(n(a.e))||isNaN(n(a.n))){toast(`Falta la ubicación del primer ${unitOf(g)}`);return false}
+  if(isNaN(azOf(g))){toast(`Falta el último ${unitOf(g)} o el azimut de la línea`);return false}
+  const old=g.pts;g.pts=[];for(let i=0;i<k;i++){const d=i*s,pe=posEN(g,d);g.pts.push({id:old[i]?.id||uid(),d:d.toFixed(1),e:pe.e.toFixed(2),n:pe.n.toFixed(2),z:''})}return true}
+async function cotasPts(g){let k=0;const far=[];for(const q of g.pts){const E=n(q.e),Nn=n(q.n);if(!validEN(E,Nn))continue;const ll=fromCTM12(E,Nn);if(!demCovers(ll[0],ll[1])){far.push([q,ll]);continue}try{const z=await elevAt(ll[0],ll[1]);if(z!=null){q.z=z.toFixed(1);k++}}catch(e){break}}
+  if(far.length){try{const zs=await elevApi(far.map(f=>f[1]));far.forEach((f,i)=>{if(zs[i]!=null){f[0].z=(+zs[i]).toFixed(1);k++}})}catch(e){}}
+  if(k&&g.ini&&g.ini.cotaSrc!=='manual'&&g.pts[0]?.z){g.ini.z=g.pts[0].z;g.ini.cotaSrc='auto'}if(k&&g.fin&&g.fin.cotaSrc!=='manual'&&g.pts.length&&!isNaN(distIF(g))){g.fin.z=g.pts[g.pts.length-1].z;g.fin.cotaSrc='auto'}return k}
+document.getElementById('f-imp').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.perfs))throw 0;
+   ask(`El respaldo tiene ${d.perfs.length} perforaciones y ${(d.geo||[]).length} líneas geofísicas, y reemplaza los datos actuales.`,'Reemplazar',async()=>{S=migrate(d);S.ejemplo=false;cur=null;curG=null;
+     for(const p of S.perfs){if(p.lat==null){if(p.gps)fromGps(p,p.gps,'norte','este');else fromEN(p,'norte','este')}}renderAll();save();toast('Respaldo importado')})}
+  catch(e){toast('Ese archivo no es un respaldo de esta bitácora')}ev.target.value=''};r.readAsText(f)});
+document.getElementById('f-logo').addEventListener('change',ev=>{const f=ev.target.files[0];ev.target.value='';if(!f)return;const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=()=>{const sc=Math.min(1,180/img.height,640/img.width);const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);S.pj.logos=S.pj.logos||[];S.pj.logos.push({data:c.toDataURL('image/png'),w:c.width,h:c.height});renderLogos();save();toast('Logo agregado al informe')};
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('No pude leer esa imagen. Usa PNG o JPG.')};img.src=url});
+function loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+async function shrink(src,max){const img=await loadImage(src);const sc=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);return c}
+document.addEventListener('change',async ev=>{if(ev.target.id!=='f-foto')return;const files=[...ev.target.files];ev.target.value='';if(!files.length)return;const p=P();if(!p)return;
+  p.fotos=p.fotos||[];let okN=0;
+  for(let i=0;i<files.length;i++){toast(`Agregando foto ${i+1} de ${files.length}…`);const url=URL.createObjectURL(files[i]);
+    try{const c=await shrink(url,1400);p.fotos.push({id:uid(),data:c.toDataURL('image/jpeg',.8),cap:'',fecha:new Date().toISOString().slice(0,10)});okN++;save()}
+    catch(e){toast('No se pudo leer la foto '+(i+1)+'.')}finally{URL.revokeObjectURL(url)}}
+  if(P()===p)renderMain();if(okN)toast(okN===1?'Foto agregada':`${okN} fotos agregadas`)});
+function ask(msg,ok,fn){const d=document.createElement('div');d.className='dlg';d.innerHTML=`<div class="box" role="dialog" aria-modal="true"><p>${esc(msg)}</p><div class="acts"><button class="btn ghost" data-c>Cancelar</button><button class="btn danger" data-o>${esc(ok)}</button></div></div>`;
+  document.body.appendChild(d);d.querySelector('[data-c]').focus();d.addEventListener('click',e=>{e.stopPropagation();if(e.target===d||e.target.hasAttribute('data-c'))d.remove();if(e.target.hasAttribute('data-o')){d.remove();fn()}})}
+let toastT;function toast(t){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
+async function saveFile(name,data){try{const type=name.endsWith('.pdf')?'application/pdf':'application/json';const url=URL.createObjectURL(new Blob([data],{type}));
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Archivo listo: '+name)}
+  catch(e){toast('No se pudo descargar el archivo')}}
+
+/* ---------- PDF ---------- */
+function pdfG(doc){return{line:(a,b,c,d)=>doc.line(a,b,c,d),dot:(x,y,r)=>doc.circle(x,y,r,'F'),circ:(x,y,r)=>doc.circle(x,y,r,'S')}}
+const ACC=[31,94,87],INK=[30,34,31],GR=[110,116,112],WAT=[47,111,173],OCH=[169,122,31],WRN=[180,73,43];
+const M0=12,WP=186;
+function header(doc,right,big){const M=M0,W=WP;const logos=S.pj.logos||[];
+  if(logos.length){let lx=M;for(const lg of logos){let h=13,w=h*lg.w/lg.h;if(w>48){w=48;h=w*lg.h/lg.w}if(lx+w>M+108)break;try{doc.addImage(lg.data,'PNG',lx,10+(13-h)/2,w,h)}catch(e){}lx+=w+5}
+    doc.setTextColor(...ACC);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.text((S.pj.empresa||'').slice(0,60),M+W,13.5,{align:'right'});
+    doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text(right,M+W,18.8,{align:'right'});if(big){doc.setFontSize(14);doc.text(big,M+W,24.6,{align:'right'})}
+    doc.setDrawColor(...ACC);doc.setLineWidth(.8);doc.line(M,26.4,M+W,26.4);doc.setTextColor(...INK);return}
+  doc.setFillColor(...ACC);doc.rect(M,10,W,15,'F');doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text((S.pj.empresa||'').slice(0,90),M+3,15.5);
+  doc.setFont('helvetica','bold');doc.setFontSize(11.5);doc.text(right,M+3,22);if(big){doc.setFontSize(18);doc.text(big,M+W-3,21.5,{align:'right'})}doc.setTextColor(...INK)}
+function cell(doc,x,y,w,h,lab,val){doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(x,y,w,h);doc.setFont('helvetica','normal');doc.setFontSize(5.8);doc.setTextColor(...GR);doc.text(lab.toUpperCase(),x+1.5,y+3);
+  doc.setTextColor(...INK);doc.setFontSize(7.8);const L=doc.splitTextToSize(String(val||'—'),w-3).slice(0,2);doc.text(L,x+1.5,y+6.6)}
+function patternBoxPdf(doc,fill,pat,x,y,w,h,s){doc.setFillColor(...hex2rgb(fill));doc.rect(x,y,w,h,'F');const ink=hex2rgb(inkOn(fill));doc.setDrawColor(...ink);doc.setFillColor(...ink);doc.setLineWidth(.13);drawPattern(pdfG(doc),pat,x,y,w,h,s)}
+const ebox=(doc,e,x,y,w,h,s)=>patternBoxPdf(doc,fillOf(e),patOf(e),x,y,w,h,s);
+const cotaTxt=(z,src)=>isNaN(n(z))?'—':n(z).toFixed(1)+(src==='auto'||src==='api'?' (modelo)':src==='gps'?' (GPS)':'');
+function logPage(doc,p){const M=M0,W=WP;header(doc,'REGISTRO DE PERFORACIÓN',p.codigo||'');const prof=profPlot(p);
+  const cw=W/4;const rows=[[['Proyecto',S.pj.nombre],['Cliente',S.pj.cliente],['Ubicación',S.pj.ubicacion],['Fecha',p.fecha]],
+   [['Norte (m)',p.norte],['Este (m)',p.este],['Cota (m.s.n.m.)',cotaTxt(p.cota,p.cotaSrc)],['Sistema de coordenadas',S.pj.sistema]],
+   [['Profundidad total (m)',profOf(p).toFixed(2)],['Nivel freático (m)',isNaN(n(p.nf))?'No encontrado':n(p.nf).toFixed(2)],['Método',p.metodo],['Responsable',p.responsable||S.pj.responsable]]];
+  rows.forEach((r,i)=>r.forEach((c,j)=>cell(doc,M+j*cw,28+i*10,cw,10,c[0],c[1])));
+  const C={c:M+13,cW:26,u:M+39,uW:14,d:M+53,dW:95,m:M+148,mW:38};const hy=61,y0=69,maxH=178;
+  doc.setFillColor(232,235,230);doc.rect(M,hy,W,8,'F');doc.setDrawColor(...INK);doc.setLineWidth(.3);doc.rect(M,hy,W,8);
+  doc.setFont('helvetica','bold');doc.setFontSize(7);[['Prof. (m)',M,13],['Columna',C.c,C.cW],['USCS',C.u,C.uW],['Descripción del material',C.d,C.dW],['Muestras / N SPT',C.m,C.mW]].forEach(([t,x,w])=>doc.text(t,x+w/2,hy+5.2,{align:'center'}));
+  const sc=Math.min(maxH/prof,40);const H=prof*sc;const Y=z=>y0+z*sc;
+  const es=[...p.estratos].sort((a,b)=>n(a.desde)-n(b.desde));
+  for(const e of es){const d=n(e.desde),h=n(e.hasta);if(isNaN(d)||isNaN(h)||h<=d)continue;const y1=Y(d),y2=Y(h);
+    ebox(doc,e,C.c,y1,C.cW,y2-y1,2.4);doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.line(C.c,y2,M+W,y2);
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...INK);doc.text(e.uscs||'—',C.u+C.uW/2,(y1+y2)/2+1.2,{align:'center'});
+    doc.setFont('helvetica','normal');doc.setFontSize(7);const L=doc.splitTextToSize(descOf(e),C.dW-4);const maxL=Math.max(1,Math.floor((y2-y1-1.2)/2.9));const sh=L.slice(0,maxL);if(L.length>maxL)sh[maxL-1]=sh[maxL-1].replace(/.{0,2}$/,'…');
+    const ty=(y2-y1)<4?(y1+y2)/2+1:y1+3;doc.text(sh,C.d+2,ty,{lineHeightFactor:1.18})}
+  doc.setDrawColor(...INK);doc.setLineWidth(.3);doc.rect(M,y0,W,H);[C.c,C.u,C.d,C.m].forEach(x=>doc.line(x,y0,x,y0+H));
+  const step=sc>=18?0.5:sc>=8?1:2;doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setLineWidth(.2);
+  for(let z=0;z<=prof+1e-6;z+=step/2){const y=Y(z);const maj=Math.abs(z/step-Math.round(z/step))<1e-6;doc.line(C.c-(maj?2.5:1.3),y,C.c,y);if(maj)doc.text(z.toFixed(step<1?1:0),C.c-3.2,y+1,{align:'right'})}
+  for(const s of p.muestras){const d=n(s.desde);if(isNaN(d))continue;let h=n(s.hasta);if(isNaN(h)||h<=d)h=d+0.15;const y1=Y(d),y2=Math.max(Y(h),y1+1.2),x=C.m+2,w=3.6;
+    doc.setDrawColor(...INK);doc.setFillColor(...INK);doc.setLineWidth(.25);if(s.tipo==='Shelby')doc.rect(x,y1,w,y2-y1,'F');else{doc.rect(x,y1,w,y2-y1);if(s.tipo==='SPT'){doc.line(x,y1,x+w,y2);doc.line(x+w,y1,x,y2)}}
+    doc.setFontSize(6.5);doc.text(`${s.codigo||''} ${s.tipo}${!isNaN(n(s.N))?'  N='+n(s.N):''}  (${d.toFixed(2)}–${h.toFixed(2)})`,x+w+1.5,(y1+y2)/2+1)}
+  const nf=n(p.nf);if(!isNaN(nf)&&nf<=prof){const y=Y(nf),cx=C.c+C.cW/2;doc.setDrawColor(...WAT);doc.setFillColor(...WAT);doc.setLineWidth(.4);doc.setLineDashPattern([1.2,1],0);doc.line(C.c,y,M+W,y);doc.setLineDashPattern([],0);
+    doc.triangle(cx-1.8,y-2.8,cx+1.8,y-2.8,cx,y,'F');doc.setTextColor(...WAT);doc.setFontSize(6.5);doc.text(`NF ${nf.toFixed(2)} m`,C.m-1.5,y-1,{align:'right'});doc.setTextColor(...INK)}
+  if(H<maxH-4){doc.setFontSize(7);doc.setFont('helvetica','italic');doc.text(`Fin de la perforación a ${profOf(p).toFixed(2)} m`,C.d+2,y0+H+4);doc.setFont('helvetica','normal')}
+  let ly=251;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text('CONVENCIONES',M,ly);ly+=2;let lx=M;doc.setFont('helvetica','normal');doc.setFontSize(6.5);
+  for(const it of legendItems(es)){const tw=doc.getTextWidth(it.label)+13;if(lx+tw>M+W){lx=M;ly+=6}ebox(doc,it.e,lx,ly,9,4.5,2.2);doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(lx,ly,9,4.5);doc.setTextColor(...INK);doc.text(it.label,lx+10.5,ly+3.3);lx+=tw}
+  ly+=7;lx=M;doc.setDrawColor(...INK);doc.setFillColor(...INK);doc.setLineWidth(.25);
+  doc.rect(lx,ly,3,4);doc.line(lx,ly,lx+3,ly+4);doc.line(lx+3,ly,lx,ly+4);doc.text('SPT',lx+4.5,ly+3);lx+=16;doc.rect(lx,ly,3,4,'F');doc.text('Shelby (inalterada)',lx+4.5,ly+3);lx+=32;doc.rect(lx,ly,3,4);doc.text('Alterada / bolsa',lx+4.5,ly+3);lx+=30;
+  doc.setFillColor(...WAT);doc.triangle(lx,ly+.5,lx+3.6,ly+.5,lx+1.8,ly+3.8,'F');doc.text('Nivel freático',lx+5,ly+3);
+  if(p.cotaSrc==='auto'||p.cotaSrc==='api'||p.cotaSrc==='gps'){ly+=8;doc.setFontSize(6);doc.setTextColor(...GR);doc.text(doc.splitTextToSize('Cota: '+(p.cotaSrc==='gps'?GPS_NOTE:DEM_NOTE),W),M,ly);doc.setTextColor(...INK);ly+=3}
+  if(p.obs){ly+=6;doc.setFontSize(6.8);doc.setFont('helvetica','bold');doc.text('Observaciones: ',M,ly);const ow=doc.getTextWidth('Observaciones: ');doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(p.obs,W-ow).slice(0,2),M+ow,ly)}}
+function table(doc,x,y,cols,rows,opt={}){const rh=opt.rh||5.4,maxY=opt.maxY||280;doc.setFont('helvetica','bold');doc.setFontSize(6.6);doc.setFillColor(232,235,230);const W=cols.reduce((a,c)=>a+c[1],0);
+  const head=()=>{doc.setFillColor(232,235,230);doc.rect(x,y,W,rh,'F');doc.setFont('helvetica','bold');doc.setFontSize(6.6);doc.setTextColor(...INK);let cx=x;cols.forEach(([t,w,al])=>{doc.text(t,al==='r'?cx+w-1.5:cx+1.5,y+rh-1.6,al==='r'?{align:'right'}:undefined);cx+=w});y+=rh};
+  head();doc.setFont('helvetica','normal');doc.setDrawColor(...GR);doc.setLineWidth(.12);let i=0;
+  for(;i<rows.length;i++){if(y+rh>maxY)break;let cx=x;rows[i].forEach((v,j)=>{const [t,w,al]=cols[j];const s=doc.splitTextToSize(String(v??'—'),w-3)[0]||'';doc.text(s,al==='r'?cx+w-1.5:cx+1.5,y+rh-1.6,al==='r'?{align:'right'}:undefined);cx+=w});y+=rh;doc.line(x,y,x+W,y)}
+  return{y,rest:rows.slice(i)}}
+function drawPlanPdf(doc,x,y,w,h,lines,bores,showNums){const all=[];lines.forEach(l=>l.pts.forEach(q=>all.push([n(q.e),n(q.n)])));bores.forEach(b=>all.push([b.e,b.n]));
+  lines.forEach(l=>{if(l.g.tipo!=='sev')for(const s of l.g.disp){const pe=posEN(l.g,n(s.pos));if(pe&&!isNaN(n(s.pos)))all.push([pe.e,pe.n])}});
+  doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(x,y,w,h);if(!all.length)return;
+  let x0=Math.min(...all.map(a=>a[0])),x1=Math.max(...all.map(a=>a[0])),y0=Math.min(...all.map(a=>a[1])),y1=Math.max(...all.map(a=>a[1]));const span=Math.max(x1-x0,y1-y0,20);
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,m=10;const sc=Math.min((w-2*m)/span,(h-2*m)/span);const X=e=>x+w/2+(e-cx)*sc,Y=v=>y+h/2-(v-cy)*sc;
+  // retícula de coordenadas
+  const gs=niceStep(span/4);doc.setFontSize(5.5);doc.setTextColor(...GR);doc.setDrawColor(220,223,218);doc.setLineWidth(.1);
+  for(let e=Math.ceil((cx-(w/2)/sc)/gs)*gs;X(e)<x+w;e+=gs){if(X(e)<=x)continue;doc.line(X(e),y,X(e),y+h);doc.text('E '+e.toFixed(0),X(e)+.6,y+h-1.2)}
+  for(let v=Math.ceil((cy-(h/2)/sc)/gs)*gs;Y(v)>y;v+=gs){if(Y(v)>=y+h)continue;doc.line(x,Y(v),x+w,Y(v));doc.text('N '+v.toFixed(0),x+1,Y(v)-.6)}
+  doc.setTextColor(...INK);
+  lines.forEach(l=>{const p=l.pts;doc.setDrawColor(...INK);doc.setLineWidth(.3);for(let i=1;i<p.length;i++)doc.line(X(n(p[i-1].e)),Y(n(p[i-1].n)),X(n(p[i].e)),Y(n(p[i].n)));
+    doc.setFillColor(...(isElec(l.g)?OCH:WAT));p.forEach(q=>doc.circle(X(n(q.e)),Y(n(q.n)),showNums?.75:.5,'F'));
+    if(p.length){doc.setFont('helvetica','bold');doc.setFontSize(6.5);const a=p[0],b=p[p.length-1];doc.text(showNums?'1':(l.g.codigo||''),X(n(a.e))+1.5,Y(n(a.n))-1.5);if(showNums)doc.text(String(p.length),X(n(b.e))+1.5,Y(n(b.n))-1.5)}
+    if(l.g.tipo!=='sev'){doc.setFillColor(...WRN);for(const d of l.g.disp){const pe=posEN(l.g,n(d.pos));if(!pe||isNaN(n(d.pos)))continue;const xx=X(pe.e),yy=Y(pe.n);doc.triangle(xx,yy-1.6,xx+1.5,yy+1,xx-1.5,yy+1,'F');if(showNums){doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...WRN);doc.text(d.codigo||'',xx+1.8,yy+2.6);doc.setTextColor(...INK)}}}});
+  bores.forEach(b=>{const xx=X(b.e),yy=Y(b.n);doc.setDrawColor(...INK);doc.setFillColor(255,255,255);doc.setLineWidth(.3);doc.circle(xx,yy,1.3,'FD');doc.setFillColor(...INK);doc.circle(xx,yy,.45,'F');doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text(b.codigo||'',xx+2,yy+1)});
+  const bar=niceStep(span/4),bw=bar*sc;doc.setDrawColor(...INK);doc.setLineWidth(.6);doc.line(x+4,y+h-5,x+4+bw,y+h-5);doc.setFont('helvetica','normal');doc.setFontSize(5.8);doc.text('0',x+4,y+h-6.5);doc.text(bar+' m',x+4+bw,y+h-6.5,{align:'center'});
+  doc.setFillColor(...INK);doc.triangle(x+w-6,y+3,x+w-7.6,y+8,x+w-4.4,y+8,'F');doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.text('N',x+w-6,y+11,{align:'center'})}
+function profilePdf(doc,x,y,w,h,pts){const zs=pts.filter(q=>!isNaN(n(q.z))&&!isNaN(n(q.d)));doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(x,y,w,h);if(zs.length<2){doc.setFontSize(7);doc.setTextColor(...GR);doc.text('Sin cotas para el perfil',x+w/2,y+h/2,{align:'center'});doc.setTextColor(...INK);return}
+  const d0=Math.min(...zs.map(q=>n(q.d))),d1=Math.max(...zs.map(q=>n(q.d)));let z0=Math.min(...zs.map(q=>n(q.z))),z1=Math.max(...zs.map(q=>n(q.z)));if(z1-z0<2){z0-=1;z1+=1}const pad=(z1-z0)*.12;z0-=pad;z1+=pad;
+  const ml=14,mb=8,X=v=>x+ml+(v-d0)/((d1-d0)||1)*(w-ml-4),Y=v=>y+3+(1-(v-z0)/(z1-z0))*(h-mb-3);const st=niceStep((z1-z0)/4),sx=niceStep((d1-d0)/6);
+  doc.setFontSize(5.8);doc.setDrawColor(225,228,222);doc.setLineWidth(.1);for(let v=Math.ceil(z0/st)*st;v<=z1;v+=st){doc.line(x+ml,Y(v),x+w-4,Y(v));doc.text(String(+v.toFixed(1)),x+ml-1,Y(v)+.8,{align:'right'})}
+  for(let v=Math.ceil(d0/sx)*sx;v<=d1+1e-6;v+=sx)doc.text(String(+v.toFixed(0)),X(v),y+h-3,{align:'center'});doc.text('Distancia (m)',x+w/2,y+h-.6,{align:'center'});
+  doc.setDrawColor(...INK);doc.setLineWidth(.35);for(let i=1;i<zs.length;i++)doc.line(X(n(zs[i-1].d)),Y(n(zs[i-1].z)),X(n(zs[i].d)),Y(n(zs[i].z)));
+  doc.setFillColor(...WAT);zs.forEach(q=>{const xx=X(n(q.d)),yy=Y(n(q.z));doc.triangle(xx,yy-.3,xx-.8,yy-1.9,xx+.8,yy-1.9,'F')})}
+function sevPlotPdf(doc,x,y,w,h,g){const pts=g.lect.map(l=>({x:n(l.ab2),y:rhoOf(g,l)})).filter(q=>q.x>0&&q.y>0).sort((a,b)=>a.x-b.x);doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(x,y,w,h);
+  if(pts.length<2){doc.setFontSize(7);doc.setTextColor(...GR);doc.text('Sin lecturas suficientes para la curva',x+w/2,y+h/2,{align:'center'});doc.setTextColor(...INK);return}
+  const lx=[Math.floor(Math.log10(Math.min(...pts.map(p=>p.x)))),Math.ceil(Math.log10(Math.max(...pts.map(p=>p.x))))],ly=[Math.floor(Math.log10(Math.min(...pts.map(p=>p.y)))),Math.ceil(Math.log10(Math.max(...pts.map(p=>p.y))))];if(lx[1]===lx[0])lx[1]++;if(ly[1]===ly[0])ly[1]++;
+  const ml=14,mb=10,X=v=>x+ml+(Math.log10(v)-lx[0])/(lx[1]-lx[0])*(w-ml-4),Y=v=>y+4+(1-(Math.log10(v)-ly[0])/(ly[1]-ly[0]))*(h-mb-4);doc.setFontSize(6);
+  for(let d=lx[0];d<=lx[1];d++){for(let k=1;k<10;k++){const v=k*10**d;if(Math.log10(v)>lx[1]+1e-9)break;doc.setDrawColor(k===1?190:228,k===1?194:231,k===1?188:226);doc.setLineWidth(k===1?.2:.1);doc.line(X(v),y+4,X(v),y+h-mb)}doc.text(String(10**d),X(10**d),y+h-mb+3.5,{align:'center'})}
+  for(let d=ly[0];d<=ly[1];d++){for(let k=1;k<10;k++){const v=k*10**d;if(Math.log10(v)>ly[1]+1e-9)break;doc.setDrawColor(k===1?190:228,k===1?194:231,k===1?188:226);doc.setLineWidth(k===1?.2:.1);doc.line(x+ml,Y(v),x+w-4,Y(v))}doc.text(String(10**d),x+ml-1,Y(10**d)+.8,{align:'right'})}
+  doc.text('AB/2 (m)',x+w/2,y+h-1.5,{align:'center'});doc.text('ρa (Ω·m)'.replace('ρ','Rho ').replace('Ω','Ohm'),x+2,y+3);
+  doc.setDrawColor(...WAT);doc.setLineWidth(.45);for(let i=1;i<pts.length;i++)doc.line(X(pts[i-1].x),Y(pts[i-1].y),X(pts[i].x),Y(pts[i].y));doc.setFillColor(255,255,255);pts.forEach(p=>doc.circle(X(p.x),Y(p.y),.7,'FD'))}
+function geoPage(doc,g){const M=M0,W=WP;header(doc,'REGISTRO DE ENSAYO GEOFÍSICO',g.codigo||'');const L=lenOf(g),az=azOf(g),el=isElec(g),u=unitOf(g);
+  const a=g.ini||{},b=g.fin||{};const cw=W/4;
+  const r1=[['Ensayo',GTIPOS[g.tipo]],['Proyecto',S.pj.nombre],['Fecha',g.fecha],['Equipo',g.equipo]];
+  let r2;if(g.tipo==='sev')r2=[['Arreglo',g.arreglo],['AB máximo (m)',isNaN(L)||!L?'—':L.toFixed(1)],['Azimut de AB (°)',isNaN(az)?'—':az.toFixed(1)],['Lecturas',String(g.lect.length)]];
+  else if(el)r2=[['Arreglo',g.arreglo],['No. de electrodos',g.n],['Distancia entre electrodos (m)',g.esp],['Longitud del tendido (m)',isNaN(L)?'—':L.toFixed(1)+(isNaN(L)?'':`  · prof. aprox. ${(L/5).toFixed(0)} m`)]];
+  else r2=[['No. de geófonos',g.n],['Distancia entre geófonos (m)',g.esp],['Longitud del tendido (m)',isNaN(L)?'—':L.toFixed(1)],['Frecuencia geófonos (Hz)',g.frec]];
+  const r3=g.tipo==='sev'?[['Centro · Norte (m)',a.n],['Centro · Este (m)',a.e],['Centro · Cota (m)',cotaTxt(a.z,a.cotaSrc)],['Operador',g.operador]]:
+    [[`${u} 1 · Norte / Este`,a.n?`${a.n} / ${a.e}`:'—'],[`${u} 1 · Cota (m)`,cotaTxt(a.z,a.cotaSrc)],[`Último · Norte / Este`,b.n?`${b.n} / ${b.e}`:'—'],['Azimut de la línea (°)',isNaN(az)?'—':az.toFixed(1)]];
+  const rows=[r1,r2,r3];if(!el)rows.push([['Fuente',g.fuente],['Apilamientos',g.apil],['Registro (ms)',g.reg],['Muestreo (ms)',g.mue]]);
+  rows.forEach((r,i)=>r.forEach((c,j)=>cell(doc,M+j*cw,28+i*10,cw,10,c[0],c[1])));let y=28+rows.length*10+6;
+  if(g.tipo==='sev'){doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('CURVA DE RESISTIVIDAD APARENTE',M,y);y+=2;sevPlotPdf(doc,M,y,W,72,g);y+=80;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('LECTURAS',M,y);y+=2;
+    const cols=[['No.',14,'r'],['AB/2 (m)',30,'r'],['MN/2 (m)',30,'r'],['K (m)',36,'r'],['R (Ohm)',36,'r'],['Rho a (Ohm·m)',40,'r']];
+    let rest=g.lect.map((l,i)=>{const K=kSev(g,l),rho=rhoOf(g,l);return[i+1,l.ab2||'—',g.arreglo==='Wenner'?(isNaN(n(l.ab2))?'—':(2*n(l.ab2)/6).toFixed(2)):(l.mn2||'—'),isNaN(K)?'—':K.toFixed(2),l.R||'—',isNaN(rho)?'—':rho.toFixed(2)]});
+    let r=table(doc,M,y,cols,rest,{maxY:272});rest=r.rest;while(rest.length){doc.addPage();header(doc,'REGISTRO DE ENSAYO GEOFÍSICO',g.codigo||'');r=table(doc,M,30,cols,rest,{maxY:272});rest=r.rest}y=r.y}
+  else{const pts=geoPts(g);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('PLANTA DEL TENDIDO',M,y);doc.text('PERFIL TOPOGRÁFICO',M+W/2+3,y);y+=2;
+    drawPlanPdf(doc,M,y,W/2-3,80,[{g,pts}],[],true);profilePdf(doc,M+W/2+3,y,W/2-3,80,pts);y+=86;
+    doc.setFontSize(6);doc.setTextColor(...GR);doc.setFont('helvetica','normal');
+    doc.text(`Puntos: ${el?'electrodos (ocre)':'geófonos (azul)'}${!el?' · disparos (triángulos rojos)':''}. ${pts.some(q=>q.z)?'Cotas del modelo Copernicus GLO-90 (Open-Meteo), aproximadas.':''}`,M,y);doc.setTextColor(...INK);y+=5;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text(`COORDENADAS DE ${u.toUpperCase()}S (MAGNA-SIRGAS Origen Nacional)`,M,y);y+=2;
+    const cols=[['No.',9,'r'],['Dist. (m)',15,'r'],['Este (m)',25,'r'],['Norte (m)',25,'r'],['Cota (m)',16,'r']];const half=Math.ceil(g.pts.length/2);
+    const rowsOf=arr=>arr.map((q,i)=>[q._i,q.d,q.e,q.n,q.z||'—']);const ix=g.pts.map((q,i)=>({...q,_i:i+1}));
+    let A=rowsOf(ix.slice(0,half)),B=rowsOf(ix.slice(half));let ra=table(doc,M,y,cols,A,{maxY:250}),rb=table(doc,M+W/2+3,y,cols,B,{maxY:250});y=Math.max(ra.y,rb.y);
+    let restA=ra.rest,restB=rb.rest;while(restA.length||restB.length){doc.addPage();header(doc,'REGISTRO DE ENSAYO GEOFÍSICO',g.codigo||'');ra=table(doc,M,30,cols,restA,{maxY:270});rb=table(doc,M+W/2+3,30,cols,restB,{maxY:270});restA=ra.rest;restB=rb.rest;y=Math.max(ra.y,rb.y)}
+    if(!el&&g.disp.length){y+=6;if(y>255){doc.addPage();header(doc,'REGISTRO DE ENSAYO GEOFÍSICO',g.codigo||'');y=32}doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('PUNTOS DE DISPARO',M,y);y+=2;
+      table(doc,M,y,[['Disparo',24],['Posición (m)',26,'r'],['Este (m)',30,'r'],['Norte (m)',30,'r'],['Observación',76]],g.disp.map(d=>{const pe=posEN(g,n(d.pos));return[d.codigo,d.pos,pe&&!isNaN(n(d.pos))?pe.e.toFixed(2):'—',pe&&!isNaN(n(d.pos))?pe.n.toFixed(2):'—',d.obs]}),{maxY:282});y+=8+g.disp.length*5.4}}
+  if(g.obs){y+=6;if(y>280){doc.addPage();header(doc,'REGISTRO DE ENSAYO GEOFÍSICO',g.codigo||'');y=34}doc.setFontSize(6.8);doc.setFont('helvetica','bold');doc.text('Observaciones: ',M,y);const ow=doc.getTextWidth('Observaciones: ');doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(g.obs,W-ow).slice(0,3),M+ow,y)}}
+function coverPage(doc,perfs,geos){const M=M0,W=WP;header(doc,'INFORME DE EXPLORACIÓN — RESUMEN');
+  const cw=W/3;[['Proyecto',S.pj.nombre],['Cliente',S.pj.cliente],['Ubicación',S.pj.ubicacion],['Sistema de coordenadas',S.pj.sistema],['Responsable',S.pj.responsable],['Registros',`${perfs.length} perforaciones · ${geos.length} ensayos geofísicos`]].forEach((c,i)=>cell(doc,M+(i%3)*cw,28+Math.floor(i/3)*10,cw,10,c[0],c[1]));
+  let y=54;if(perfs.length){doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('PERFORACIONES',M,y);y+=2;
+    const r=table(doc,M,y,[['Código',18],['Fecha',20],['Norte (m)',26,'r'],['Este (m)',26,'r'],['Cota (m)',20,'r'],['Prof. (m)',18,'r'],['NF (m)',18,'r'],['Estratos',18,'r'],['Muestras',22,'r']],
+      perfs.map(p=>[p.codigo,p.fecha,p.norte,p.este,isNaN(n(p.cota))?'—':n(p.cota).toFixed(1),profOf(p).toFixed(2),isNaN(n(p.nf))?'N.E.':n(p.nf).toFixed(2),p.estratos.length,p.muestras.length]),{maxY:150});y=r.y+3;
+    doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...GR);doc.text('N.E.: nivel freático no encontrado',M,y+1);doc.setTextColor(...INK);y+=8}
+  if(geos.length){doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('ENSAYOS GEOFÍSICOS',M,y);y+=2;
+    const r=table(doc,M,y,[['Código',18],['Ensayo',52],['Fecha',20],['Arreglo / fuente',36],['Puntos',16,'r'],['Esp. (m)',18,'r'],['Long. (m)',26,'r']],
+      geos.map(g=>{const L=lenOf(g);return[g.codigo,GTIPOS[g.tipo],g.fecha,isElec(g)?g.arreglo:g.fuente,g.tipo==='sev'?g.lect.length:g.n,g.tipo==='sev'?'—':g.esp,isNaN(L)||!L?'—':L.toFixed(1)]}),{maxY:200});y=r.y+8}
+  const sel=perfs.slice(0,12);if(!sel.length||y>205)return;doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('COLUMNAS COMPARADAS (misma escala vertical)',M,y);y+=9;
+  const maxP=Math.max(...sel.map(profPlot));const sc=Math.min((272-y-6)/maxP,30);const cwid=Math.min(14,(W/sel.length)*.45);
+  doc.setFont('helvetica','normal');doc.setFontSize(6);const st=maxP>12?2:maxP>4?1:0.5;
+  for(let z=0;z<=maxP+1e-6;z+=st){doc.setDrawColor(220,223,218);doc.setLineWidth(.1);doc.line(M+8,y+z*sc,M+W,y+z*sc);doc.text(z.toFixed(st<1?1:0),M+6.5,y+z*sc+1,{align:'right'})}
+  sel.forEach((p,i)=>{const cx=M+10+i*((W-10)/sel.length)+((W-10)/sel.length-cwid)/2;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text(p.codigo||'',cx+cwid/2,y-2,{align:'center'});
+    for(const e of p.estratos){const d=n(e.desde),h=n(e.hasta);if(isNaN(d)||isNaN(h)||h<=d)continue;ebox(doc,e,cx,y+d*sc,cwid,(h-d)*sc,1.8);doc.setDrawColor(...GR);doc.setLineWidth(.15);doc.line(cx,y+h*sc,cx+cwid,y+h*sc)}
+    doc.setDrawColor(...INK);doc.setLineWidth(.25);doc.rect(cx,y,cwid,profPlot(p)*sc);const nf=n(p.nf);if(!isNaN(nf)){doc.setFillColor(...WAT);doc.triangle(cx+cwid+.6,y+nf*sc-1.6,cx+cwid+3.4,y+nf*sc-1.6,cx+cwid+2,y+nf*sc,'F')}})}
+function locationPage(doc,perfs,geos){const bores=perfs.filter(p=>validEN(n(p.este),n(p.norte))).map(p=>({codigo:p.codigo,e:n(p.este),n:n(p.norte)}));
+  const lines=geos.map(g=>({g,pts:g.tipo==='sev'?(validEN(n(g.ini?.e),n(g.ini?.n))?[{e:g.ini.e,n:g.ini.n,d:0}]:[]):geoPts(g)})).filter(l=>l.pts.length);
+  if(!bores.length&&!lines.length)return false;doc.addPage();header(doc,'PLANO DE LOCALIZACIÓN');const M=M0,W=WP;drawPlanPdf(doc,M,30,W,200,lines,bores,false);
+  let y=238;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text('CONVENCIONES',M,y);y+=5;doc.setFont('helvetica','normal');doc.setFontSize(6.5);
+  doc.setDrawColor(...INK);doc.setFillColor(255,255,255);doc.circle(M+1.5,y-1,1.3,'FD');doc.setFillColor(...INK);doc.circle(M+1.5,y-1,.45,'F');doc.text('Perforación',M+5,y);
+  doc.setFillColor(...OCH);doc.circle(M+36,y-1,.75,'F');doc.text('Electrodo / centro de SEV',M+39,y);doc.setFillColor(...WAT);doc.circle(M+80,y-1,.75,'F');doc.text('Geófono',M+83,y);
+  doc.setFillColor(...WRN);doc.triangle(M+104,y-2.6,M+105.5,y,M+102.5,y,'F');doc.text('Punto de disparo',M+108,y);
+  y+=6;doc.setFontSize(6);doc.setTextColor(...GR);doc.text(doc.splitTextToSize(`Coordenadas planas ${S.pj.sistema||'MAGNA-SIRGAS / Origen Nacional'}. Escala gráfica en metros.`,W),M,y);doc.setTextColor(...INK);return true}
+function photoPages(doc,p,imgs){const fs=(p.fotos||[]);if(!fs.length)return;const M=M0,W=WP,cw=(W-6)/2,ih=64,rowH=ih+13;
+  fs.forEach((fo,i)=>{const k=i%6;if(k===0){doc.addPage();header(doc,'REGISTRO FOTOGRÁFICO',p.codigo||'');}
+    const x=M+(k%2)*(cw+6),y=31+Math.floor(k/2)*(rowH+4);const im=imgs[fo.id];
+    doc.setDrawColor(...GR);doc.setLineWidth(.2);doc.rect(x,y,cw,ih);
+    if(im){let w=cw,h=w*im.h/im.w;if(h>ih){h=ih;w=h*im.w/im.h}try{doc.addImage(im.d,'JPEG',x+(cw-w)/2,y+(ih-h)/2,w,h)}catch(e){}}
+    else{doc.setFontSize(7);doc.setTextColor(...GR);doc.text('Imagen no disponible',x+cw/2,y+ih/2,{align:'center'});doc.setTextColor(...INK)}
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);const lab=`Foto ${i+1}. `;doc.text(lab,x,y+ih+4);const lw=doc.getTextWidth(lab);
+    doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fo.cap||`Perforación ${p.codigo||''}`,cw-lw).slice(0,2),x+lw,y+ih+4)})}
+/* borra el nombre del programa generador en las propiedades del archivo, sin cambiar su longitud */
+function scrubProducer(buf){const u=new Uint8Array(buf);const pat=[...'/Producer ('].map(c=>c.charCodeAt(0));
+  outer:for(let i=0;i<u.length-pat.length;i++){for(let j=0;j<pat.length;j++)if(u[i+j]!==pat[j])continue outer;let k=i+pat.length;while(k<u.length&&u[k]!==41){u[k]=32;k++}break}return buf}
+async function exportPdf(perfs,geos,name,cover){if(!window.jspdf){toast('No se pudo cargar el generador de PDF. Revisa la conexión.');return}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});let first=true;
+  doc.setProperties({title:name.replace(/\.pdf$/,'').replace(/_/g,' '),subject:S.pj.nombre||'',author:S.pj.empresa||'',creator:S.pj.empresa||'',keywords:''});
+  if(cover){coverPage(doc,perfs,geos);first=false;if(locationPage(doc,perfs,geos))first=false}
+  const nF=perfs.reduce((a,p)=>a+(p.fotos||[]).length,0);const imgs={};
+  if(nF){toast(`Preparando ${nF} fotos para el PDF…`);for(const p of perfs)for(const fo of (p.fotos||[])){try{const c=await shrink(fo.data,1200);imgs[fo.id]={d:c.toDataURL('image/jpeg',.8),w:c.width,h:c.height}}catch(e){}}}
+  for(const p of perfs){if(!first)doc.addPage();first=false;logPage(doc,p);photoPages(doc,p,imgs)}
+  for(const g of geos){if(!first)doc.addPage();first=false;geoPage(doc,g)}
+  const tot=doc.getNumberOfPages();const hoy=new Date().toLocaleDateString('es-CO');
+  for(let i=1;i<=tot;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...GR);doc.text(`${S.pj.nombre||''}${S.pj.nombre?' · ':''}Fecha de emisión ${hoy}`.slice(0,110),12,290);doc.text(`Página ${i} de ${tot}`,198,290,{align:'right'})}
+  await saveFile(name,scrubProducer(doc.output('arraybuffer')))}
+
+boot();
+</script>
+
+</body>
+</html>
